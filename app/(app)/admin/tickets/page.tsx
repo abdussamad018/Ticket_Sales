@@ -43,6 +43,33 @@ export default async function AdminTicketsPage() {
               />
             </div>
             <div className="space-y-1">
+              <label className="text-sm font-medium" htmlFor="attendeeType">
+                Type
+              </label>
+              <select
+                id="attendeeType"
+                name="attendeeType"
+                required
+                className="h-11 w-full rounded-xl border border-black/10 bg-transparent px-3 outline-none focus:border-black/30 dark:border-white/10 dark:focus:border-white/30"
+                defaultValue="ADULT"
+              >
+                <option value="ADULT">Adult</option>
+                <option value="CHILD">Child</option>
+                <option value="INFANT">Infant</option>
+              </select>
+            </div>
+
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="hasTshirt"
+                defaultChecked
+                className="h-4 w-4 rounded border-black/20 dark:border-white/20"
+              />
+              Has T-shirt
+            </label>
+
+            <div className="space-y-1">
               <label className="text-sm font-medium" htmlFor="price">
                 Price
               </label>
@@ -70,6 +97,8 @@ export default async function AdminTicketsPage() {
                 <tr>
                   <th className="py-2 pr-4">Code</th>
                   <th className="py-2 pr-4">Name</th>
+                  <th className="py-2 pr-4">Type</th>
+                  <th className="py-2 pr-4">T-shirt</th>
                   <th className="py-2 pr-4">Price</th>
                   <th className="py-2 pr-4">Active</th>
                 </tr>
@@ -79,6 +108,8 @@ export default async function AdminTicketsPage() {
                   <tr key={t.id} className="border-t border-black/5 dark:border-white/10">
                     <td className="py-2 pr-4 font-medium">{t.code}</td>
                     <td className="py-2 pr-4">{t.name}</td>
+                    <td className="py-2 pr-4">{t.attendeeType}</td>
+                    <td className="py-2 pr-4">{t.hasTshirt ? "Yes" : "No"}</td>
                     <td className="py-2 pr-4">{t.price}</td>
                     <td className="py-2 pr-4">{t.isActive ? "Yes" : "No"}</td>
                   </tr>

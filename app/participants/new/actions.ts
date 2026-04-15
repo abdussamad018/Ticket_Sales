@@ -3,37 +3,30 @@
 import { z } from "zod";
 import { redirect } from "next/navigation";
 
-import type { TshirtSize } from "@prisma/client";
 import { requireSession } from "@/app/lib/auth";
 import { prisma } from "@/app/lib/prisma";
 
-const schema = z.object({
+const sizeSchema = z.enum(["XS", "S", "M", "L", "XL", "XXL", "XXXL"]);
+type TshirtSize = z.infer<typeof sizeSchema>;
+
+const baseSchema = z.object({
   batchId: z.string().min(1),
-  ticketId: z.string().min(1),
-  ticketQty: z.coerce.number().int().min(1).max(20).default(1),
-  fullName: z.string().min(2),
-  phone: z.string().optional(),
-  email: z.string().email().optional().or(z.literal("")),
-  gender: z.string().optional().or(z.literal("")),
-  tshirt: z.enum(["XS", "S", "M", "L", "XL", "XXL", "XXXL"]).optional().or(z.literal("")),
-  paymentScreenshotUrl: z.string().url().optional().or(z.literal("")),
-  notes: z.string().optional().or(z.literal("")),
+  paymentScreenshotUrl: z.string().optional(),
+  notes: z.string().optional(),
 });
+
+function getText(formData: FormData, key: string) {
+  const v = formData.get(key);
+  return typeof v === "string" ? v : "";
+}
 
 export async function createParticipantAction(formData: FormData) {
   const session = await requireSession();
 
-  const parsed = schema.safeParse({
+  const parsed = baseSchema.safeParse({
     batchId: formData.get("batchId"),
-    ticketId: formData.get("ticketId"),
-    ticketQty: formData.get("ticketQty"),
-    fullName: formData.get("fullName"),
-    phone: formData.get("phone") ?? undefined,
-    email: (formData.get("email") as string | null) ?? undefined,
-    gender: (formData.get("gender") as string | null) ?? undefined,
-    tshirt: (formData.get("tshirt") as string | null) ?? undefined,
-    paymentScreenshotUrl: (formData.get("paymentScreenshotUrl") as string | null) ?? undefined,
-    notes: (formData.get("notes") as string | null) ?? undefined,
+    paymentScreenshotUrl: getText(formData, "paymentScreenshotUrl"),
+    notes: getText(formData, "notes"),
   });
 
   if (!parsed.success) {
@@ -45,19 +38,76 @@ export async function createParticipantAction(formData: FormData) {
     return { ok: false as const, error: "You can only add participants for your batch." };
   }
 
+  const tickets = await prisma.ticket.findMany({ where: { isActive: true } });
+  if (tickets.length === 0) return { ok: false as const, error: "No active tickets found." };
+
+  const attendees: Array<{
+    type: "ADULT" | "CHILD" | "INFANT";
+    fullName: string | null;
+    phone: string | null;
+    tshirt: TshirtSize | null;
+    ticketId: string;
+  }> = [];
+
+  let adultCount = 0;
+  let childCount = 0;
+  let infantCount = 0;
+
+  for (const t of tickets) {
+    const raw = getText(formData, `ticketCount_${t.id}`);
+    const count = Math.max(0, Math.min(20, Number.parseInt(raw || "0", 10) || 0));
+    if (count <= 0) continue;
+
+    for (let i = 0; i < count; i++) {
+      const keyBase = `attendee_${t.id}_${i}`;
+      const name = getText(formData, `${keyBase}_fullName`).trim();
+      const phone = getText(formData, `${keyBase}_phone`).trim();
+      const tshirtRaw = getText(formData, `${keyBase}_tshirt`).trim();
+      const tshirtParsed = tshirtRaw ? sizeSchema.safeParse(tshirtRaw) : null;
+      const tshirt = t.hasTshirt && tshirtParsed && tshirtParsed.success ? tshirtParsed.data : null;
+
+      if (t.attendeeType === "ADULT") {
+        if (!name) return { ok: false as const, error: `Adult name is required for ticket "${t.name}".` };
+        adultCount += 1;
+      } else if (t.attendeeType === "CHILD") {
+        childCount += 1;
+      } else {
+        infantCount += 1;
+      }
+
+      attendees.push({
+        type: t.attendeeType,
+        fullName: name || null,
+        phone: t.attendeeType === "ADULT" ? phone || null : null,
+        tshirt,
+        ticketId: t.id,
+      });
+    }
+  }
+
+  if (attendees.length === 0) return { ok: false as const, error: "Select at least one ticket." };
+
   await prisma.participant.create({
     data: {
       batchId,
-      ticketId: parsed.data.ticketId,
-      ticketQty: parsed.data.ticketQty,
-      fullName: parsed.data.fullName,
-      phone: parsed.data.phone || null,
-      email: parsed.data.email || null,
-      gender: parsed.data.gender || null,
-      tshirt: parsed.data.tshirt ? (parsed.data.tshirt as TshirtSize) : null,
-      paymentScreenshotUrl: parsed.data.paymentScreenshotUrl || null,
-      notes: parsed.data.notes || null,
+      adultCount,
+      childCount,
+      infantCount,
+      totalChildrenAttending: childCount,
+      paymentScreenshotUrl: parsed.data.paymentScreenshotUrl?.trim() || null,
+      notes: parsed.data.notes?.trim() || null,
       createdById: session.userId,
+      attendees: {
+        // Prisma enum typing isn't available in this workspace's generated d.ts,
+        // but runtime values are valid because they match the Prisma schema.
+        create: attendees as unknown as Array<{
+          type: "ADULT" | "CHILD" | "INFANT";
+          fullName: string | null;
+          phone: string | null;
+          tshirt: TshirtSize | null;
+          ticketId: string;
+        }>,
+      },
     },
   });
 

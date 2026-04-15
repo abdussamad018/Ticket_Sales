@@ -1,4 +1,3 @@
-import { PrismaClient } from "@prisma/client";
 import "dotenv/config";
 
 import { hash } from "bcryptjs";
@@ -6,6 +5,9 @@ import { PrismaPg } from "@prisma/adapter-pg";
 
 const url = process.env.DATABASE_URL;
 if (!url) throw new Error("Missing DATABASE_URL env var");
+// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any
+const { PrismaClient } = require("@prisma/client") as { PrismaClient: new (args: any) => any };
+
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: url }),
 });
@@ -35,15 +37,16 @@ async function main() {
   });
 
   const tickets = [
-    { code: "ADULT", name: "Adult", price: 1000 },
-    { code: "CHILD", name: "Child", price: 500 },
-    { code: "INFANT", name: "Infant", price: 0 },
+    { code: "ALUMNI", name: "Per Alumni", price: 500, attendeeType: "ADULT" as const, hasTshirt: true },
+    { code: "GUEST", name: "Spouse/Guest/Parents", price: 500, attendeeType: "ADULT" as const, hasTshirt: true },
+    { code: "KID_05_12", name: "Kids (05 years- 12 years)", price: 300, attendeeType: "CHILD" as const, hasTshirt: false },
+    { code: "KID_00_05", name: "Kids (0-05 years)", price: 0, attendeeType: "INFANT" as const, hasTshirt: false },
   ];
 
   for (const t of tickets) {
     await prisma.ticket.upsert({
       where: { code: t.code },
-      update: { name: t.name, price: t.price, isActive: true },
+      update: { name: t.name, price: t.price, attendeeType: t.attendeeType, hasTshirt: t.hasTshirt, isActive: true },
       create: { ...t, isActive: true },
     });
   }
