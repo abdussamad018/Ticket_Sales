@@ -1,0 +1,124 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  SUPER_ADMIN
+  BATCH_REP
+}
+
+enum TshirtSize {
+  XS
+  S
+  M
+  L
+  XL
+  XXL
+  XXXL
+}
+
+enum AttendeeType {
+  ADULT
+  CHILD
+  INFANT
+}
+
+model Batch {
+  id        String   @id @default(cuid())
+  code      String   @unique // e.g. "2014", "14", "CSE-2014"
+  name      String? // optional human label
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reps         User[]        @relation("BatchReps")
+  participants Participant[]
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String?
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(BATCH_REP)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  batchId String?
+  batch   Batch?  @relation("BatchReps", fields: [batchId], references: [id], onDelete: SetNull)
+
+  createdParticipants Participant[] @relation("CreatedBy")
+
+  @@index([role])
+  @@index([batchId])
+}
+
+model Ticket {
+  id        String   @id @default(cuid())
+  code      String   @unique // e.g. "ADULT", "CHILD", "INFANT"
+  name      String
+  price     Int // store in smallest currency unit (e.g. BDT * 100) OR plain BDT; choose one consistently
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  participants Participant[]
+  attendees    Attendee[]
+}
+
+model Participant {
+  id String @id @default(cuid())
+
+  adultCount  Int @default(0)
+  childCount  Int @default(0)
+  infantCount Int @default(0)
+
+  totalChildrenAttending Int     @default(0)
+  notes                  String?
+
+  paymentScreenshotUrl String?
+
+  batchId String
+  batch   Batch  @relation(fields: [batchId], references: [id], onDelete: Restrict)
+
+  createdById String
+  createdBy   User   @relation("CreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  attendees Attendee[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ticket    Ticket?  @relation(fields: [ticketId], references: [id])
+  ticketId  String?
+
+  @@index([batchId])
+  @@index([createdById])
+}
+
+model Attendee {
+  id String @id @default(cuid())
+
+  type     AttendeeType
+  fullName String?
+  phone    String?
+  tshirt   TshirtSize?
+
+  ticketId String
+  ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Restrict)
+
+  participantId String
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([participantId])
+  @@index([type])
+  @@index([tshirt])
+  @@index([ticketId])
+}

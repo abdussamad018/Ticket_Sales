@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Alumni Event — Participant Entry & Reporting
 
-## Getting Started
+Tech stack: **Next.js (App Router)**, **Prisma**, **PostgreSQL**, **Tailwind**.
 
-First, run the development server:
+### Roles
+
+- **Super Admin**
+  - Participant data entry for **all** batches
+  - Create/manage **batches**, **tickets**, and **batch representatives** (multiple reps per batch)
+  - Reports: batch-wise participant count, batch-wise T-shirt size, overall T-shirt size
+- **Batch Representative**
+  - Participant data entry for **own** batch only
+  - Reports limited to **own** batch
+
+### Setup
+
+1) Create `.env` from `.env.example` and set:
+
+- `DATABASE_URL`
+- `AUTH_SECRET`
+- `SUPER_ADMIN_EMAIL`
+- `SUPER_ADMIN_PASSWORD`
+
+2) Install dependencies:
+
+```bash
+npm install
+```
+
+3) Create DB tables:
+
+```bash
+npx prisma migrate dev
+```
+
+4) Seed initial data (creates Super Admin user + default ticket types: Adult/Child/Infant):
+
+```bash
+npm run prisma:seed
+```
+
+5) Run the app:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Main URLs
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `/login`
+- `/dashboard`
+- `/participants/new`
+- `/reports`
+- `/admin` (Super Admin only)
