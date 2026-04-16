@@ -36,6 +36,17 @@ async function main() {
     },
   });
 
+  const startYear = 1965;
+  const currentYear = new Date().getFullYear();
+  for (let y = startYear; y <= currentYear; y++) {
+    const code = String(y);
+    await prisma.batch.upsert({
+      where: { code },
+      update: { isActive: true },
+      create: { code, name: null, isActive: true },
+    });
+  }
+
   const tickets = [
     { code: "ALUMNI", name: "Per Alumni", price: 500, attendeeType: "ADULT" as const, hasTshirt: true },
     { code: "GUEST", name: "Spouse/Guest/Parents", price: 500, attendeeType: "ADULT" as const, hasTshirt: true },
@@ -50,6 +61,12 @@ async function main() {
       create: { ...t, isActive: true },
     });
   }
+
+  await prisma.systemSetting.upsert({
+    where: { id: "singleton" },
+    update: {},
+    create: { id: "singleton", registrationOpen: true },
+  });
 }
 
 main()

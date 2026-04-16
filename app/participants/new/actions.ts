@@ -27,6 +27,12 @@ function participantFormError(message: string): never {
 export async function createParticipantAction(formData: FormData) {
   const session = await requireSession();
 
+  if (session.role === "BATCH_REP") {
+    const setting = await prisma.systemSetting.findUnique({ where: { id: "singleton" } });
+    const open = setting?.registrationOpen ?? true;
+    if (!open) participantFormError("Close Registration");
+  }
+
   const parsed = baseSchema.safeParse({
     batchId: formData.get("batchId"),
     paymentScreenshotUrl: getText(formData, "paymentScreenshotUrl"),

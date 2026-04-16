@@ -11,6 +11,10 @@ export default async function NewParticipantPage({
   const session = await requireSession();
   const { error } = await searchParams;
 
+  const setting = await prisma.systemSetting.findUnique({ where: { id: "singleton" } });
+  const registrationOpen = setting?.registrationOpen ?? true;
+  const closedForRep = session.role === "BATCH_REP" && !registrationOpen;
+
   const batches =
     session.role === "BATCH_REP" && session.batchId
       ? await prisma.batch.findMany({ where: { id: session.batchId }, orderBy: { code: "asc" } })
@@ -36,22 +40,33 @@ export default async function NewParticipantPage({
         </div>
       ) : null}
 
+      {closedForRep ? (
+        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100">
+          <div className="font-semibold">Close Registration</div>
+          <div className="mt-1 text-amber-800 dark:text-amber-200">
+            Registration is currently closed by admin. Please contact admin if you need to add entries.
+          </div>
+        </div>
+      ) : null}
+
       <div className="mt-6 grid gap-4">
-        <form action={createParticipantAction}>
-          <ParticipantWizard
-            batches={batches.map((b) => ({ id: b.id, code: b.code }))}
-            tickets={tickets.map((t) => ({
-              id: t.id,
-              code: t.code,
-              name: t.name,
-              price: t.price,
-              attendeeType: t.attendeeType,
-              hasTshirt: t.hasTshirt,
-            }))}
-            batchLocked={session.role === "BATCH_REP"}
-            defaultBatchId={session.batchId ?? undefined}
-          />
-        </form>
+        {!closedForRep ? (
+          <form action={createParticipantAction}>
+            <ParticipantWizard
+              batches={batches.map((b) => ({ id: b.id, code: b.code }))}
+              tickets={tickets.map((t) => ({
+                id: t.id,
+                code: t.code,
+                name: t.name,
+                price: t.price,
+                attendeeType: t.attendeeType,
+                hasTshirt: t.hasTshirt,
+              }))}
+              batchLocked={session.role === "BATCH_REP"}
+              defaultBatchId={session.batchId ?? undefined}
+            />
+          </form>
+        ) : null}
       </div>
     </div>
   );

@@ -126,3 +126,10 @@ model Attendee {
   @@index([tshirt])
   @@index([ticketId])
 }
+
+model SystemSetting {
+  /// Singleton row (use id="singleton")
+  id               String   @id
+  registrationOpen Boolean  @default(true)
+  updatedAt        DateTime @updatedAt
+}

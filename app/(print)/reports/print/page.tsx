@@ -1,6 +1,7 @@
 import { requireSession } from "@/app/lib/auth";
 import { prisma } from "@/app/lib/prisma";
 import { PrintButton } from "./PrintButton";
+import { BatchCombobox } from "@/app/ui/BatchCombobox";
 
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL", "XXXL"] as const;
 
@@ -92,24 +93,14 @@ export default async function ReportsPrintPage({
         <div className="flex flex-wrap items-end gap-2">
           {isAdmin && batchesAll.length > 0 ? (
             <form method="get" className="flex items-end gap-2">
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-zinc-600" htmlFor="batchId">
-                  Batch
-                </label>
-                <select
-                  id="batchId"
-                  name="batchId"
-                  defaultValue={batchId ?? ""}
-                  className="h-10 rounded-xl border border-black/10 bg-white px-3 text-sm outline-none focus:border-black/30"
-                >
-                  <option value="">All batches</option>
-                  {batchesAll.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.code}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <BatchCombobox
+                batches={batchesAll.map((b) => ({ id: b.id, code: b.code }))}
+                name="batchId"
+                label="Batch"
+                defaultBatchId={batchId}
+                allowAll
+                inputClassName="h-10 min-w-[12rem] rounded-xl border border-black/10 bg-white px-3 text-sm outline-none focus:border-black/30"
+              />
               <button
                 type="submit"
                 className="h-10 rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5"

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { requireSession } from "@/app/lib/auth";
 import { prisma } from "@/app/lib/prisma";
 import { DeleteParticipantButton } from "./delete-participant-button";
+import { BatchCombobox } from "@/app/ui/BatchCombobox";
 
 function sumParticipantAmount(
   attendees: Array<{ ticket: { price: number } }>,
@@ -76,6 +77,19 @@ export default async function ParticipantsListPage({
         </Link>
       </div>
 
+      <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+        <a
+          href={
+            isAdmin && batchFilterActive && batchIdFilter
+              ? `/participants/export?batchId=${encodeURIComponent(batchIdFilter)}`
+              : "/participants/export"
+          }
+          className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
+        >
+          Export CSV
+        </a>
+      </div>
+
       {error ? (
         <div
           role="alert"
@@ -90,24 +104,13 @@ export default async function ParticipantsListPage({
           method="get"
           className="mt-6 flex flex-wrap items-end gap-3 rounded-2xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-950"
         >
-          <div className="space-y-1">
-            <label htmlFor="batchId" className="text-sm font-medium">
-              Filter by batch
-            </label>
-            <select
-              id="batchId"
-              name="batchId"
-              defaultValue={batchIdFilter ?? ""}
-              className="h-11 min-w-[12rem] rounded-xl border border-black/10 bg-transparent px-3 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:focus:border-white/30"
-            >
-              <option value="">All batches</option>
-              {batchesForFilter.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.code}
-                </option>
-              ))}
-            </select>
-          </div>
+          <BatchCombobox
+            batches={batchesForFilter}
+            name="batchId"
+            label="Filter by batch"
+            defaultBatchId={batchIdFilter}
+            allowAll
+          />
           <button
             type="submit"
             className="h-11 rounded-xl bg-black px-4 text-sm text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
