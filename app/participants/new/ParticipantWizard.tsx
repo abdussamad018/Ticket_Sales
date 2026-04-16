@@ -183,7 +183,7 @@ export function ParticipantWizard({
                   required
                   defaultValue={defaultBatchId ?? batches[0]?.id}
                   disabled={batchLocked}
-                  className="h-11 w-full rounded-xl border border-black/10 bg-transparent px-3 outline-none focus:border-black/30 disabled:opacity-60 dark:border-white/10 dark:focus:border-white/30"
+                  className="h-11 w-full rounded-xl border border-black/10 bg-white px-3 text-zinc-900 outline-none focus:border-black/30 disabled:opacity-60 dark:border-white/10 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-white/30 dark:[color-scheme:dark]"
                 >
                   {batches.map((b) => (
                     <option key={b.id} value={b.id}>
@@ -263,7 +263,7 @@ export function ParticipantWizard({
                             <select
                               id={`${keyBase}_tshirt`}
                               name={`${keyBase}_tshirt`}
-                              className="h-11 w-full rounded-xl border border-black/10 bg-transparent px-3 outline-none focus:border-black/30 dark:border-white/10 dark:focus:border-white/30"
+                              className="h-11 w-full rounded-xl border border-black/10 bg-white px-3 text-zinc-900 outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-white/30 dark:[color-scheme:dark]"
                               defaultValue=""
                             >
                               <option value="">Select...</option>

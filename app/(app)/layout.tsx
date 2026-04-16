@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { requireSession } from "@/app/lib/auth";
 import { prisma } from "@/app/lib/prisma";
+import { LoadingLinkButton } from "@/app/ui/LoadingLinkButton";
 
 function NavLink({
   href,
@@ -11,12 +12,13 @@ function NavLink({
   label: string;
 }) {
   return (
-    <Link
+    <LoadingLinkButton
       href={href}
+      pendingText="Loading…"
       className="flex h-10 items-center rounded-xl px-3 text-sm text-zinc-700 hover:bg-black/5 dark:text-zinc-200 dark:hover:bg-white/10"
     >
       {label}
-    </Link>
+    </LoadingLinkButton>
   );
 }
 
@@ -81,37 +83,42 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
         <main className="min-w-0 flex-1">
           <div className="mb-4 flex gap-2 overflow-x-auto lg:hidden">
-            <Link
+            <LoadingLinkButton
               href="/dashboard"
+              pendingText="Loading…"
               className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
             >
               Dashboard
-            </Link>
-            <Link
+            </LoadingLinkButton>
+            <LoadingLinkButton
               href="/participants"
+              pendingText="Loading…"
               className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
             >
               Participants
-            </Link>
-            <Link
+            </LoadingLinkButton>
+            <LoadingLinkButton
               href="/participants/new"
+              pendingText="Loading…"
               className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
             >
               Add participant
-            </Link>
-            <Link
+            </LoadingLinkButton>
+            <LoadingLinkButton
               href="/reports"
+              pendingText="Loading…"
               className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
             >
               Reports
-            </Link>
+            </LoadingLinkButton>
             {session.role === "SUPER_ADMIN" ? (
-              <Link
+              <LoadingLinkButton
                 href="/admin"
+                pendingText="Loading…"
                 className="inline-flex h-10 items-center rounded-xl bg-black px-4 text-sm text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
               >
                 Admin
-              </Link>
+              </LoadingLinkButton>
             ) : null}
           </div>
 
