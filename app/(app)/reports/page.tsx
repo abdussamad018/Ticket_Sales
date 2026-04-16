@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 
 import { requireSession } from "@/app/lib/auth";
 import { prisma } from "@/app/lib/prisma";
+import { LoadingLinkButton } from "@/app/ui/LoadingLinkButton";
 
 function sumTicketAmount(attendees: Array<{ ticket: { price: number } }>) {
   return attendees.reduce((s, a) => s + a.ticket.price, 0);
@@ -130,15 +131,25 @@ export default async function ReportsPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl px-0 py-0">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Reports</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          {session.role === "BATCH_REP" && session.batchId
-            ? "Showing only your batch."
-            : session.role === "BATCH_REP"
-              ? "Your account has no batch assigned — reports are empty until an admin links your batch."
-              : "Showing all batches."}
-        </p>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-2xl font-semibold tracking-tight">Reports</h1>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            {session.role === "BATCH_REP" && session.batchId
+              ? "Showing only your batch."
+              : session.role === "BATCH_REP"
+                ? "Your account has no batch assigned — reports are empty until an admin links your batch."
+                : "Showing all batches."}
+          </p>
+        </div>
+
+        <LoadingLinkButton
+          href="/reports/print"
+          pendingText="Opening…"
+          className="inline-flex h-10 shrink-0 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
+        >
+          Print (Batch T-shirt)
+        </LoadingLinkButton>
       </div>
 
       {session.role === "BATCH_REP" && session.batchId ? (
