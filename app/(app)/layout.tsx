@@ -71,6 +71,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </div>
             <nav className="flex flex-col gap-1">
               <NavLink href="/dashboard" label="Dashboard" />
+              <NavLink href="/participants" label="Participants" />
               <NavLink href="/participants/new" label="Add participant" />
               <NavLink href="/reports" label="Reports" />
               {session.role === "SUPER_ADMIN" ? <NavLink href="/admin" label="Admin" /> : null}
@@ -85,6 +86,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
             >
               Dashboard
+            </Link>
+            <Link
+              href="/participants"
+              className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
+            >
+              Participants
             </Link>
             <Link
               href="/participants/new"

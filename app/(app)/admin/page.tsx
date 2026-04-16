@@ -42,6 +42,16 @@ export default async function AdminHomePage() {
           <div className="text-sm font-semibold">Batches</div>
           <div className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Create & activate batches</div>
         </Link>
+
+        <Link
+          className="rounded-2xl border border-black/10 bg-white p-5 hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
+          href="/participants"
+        >
+          <div className="text-sm font-semibold">All participants</div>
+          <div className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            Every batch — open the same list batch reps use, with full visibility
+          </div>
+        </Link>
       </div>
     </div>
   );

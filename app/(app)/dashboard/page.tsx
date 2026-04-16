@@ -28,6 +28,12 @@ export default async function DashboardPage() {
         <div className="flex flex-wrap gap-2">
           <Link
             className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
+            href="/participants"
+          >
+            Participants
+          </Link>
+          <Link
+            className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
             href="/participants/new"
           >
             Add participant
@@ -58,11 +64,14 @@ export default async function DashboardPage() {
         <div className="rounded-2xl border border-black/10 bg-white p-5 dark:border-white/10 dark:bg-zinc-950">
           <div className="text-sm text-zinc-600 dark:text-zinc-400">Quick actions</div>
           <div className="mt-3 flex flex-col gap-2 text-sm">
+            <Link className="underline underline-offset-4" href="/participants">
+              View participant list
+            </Link>
             <Link className="underline underline-offset-4" href="/participants/new">
               Create participant entry
             </Link>
             <Link className="underline underline-offset-4" href="/reports">
-              View reports
+              View reports & sales
             </Link>
           </div>
         </div>
@@ -70,7 +79,8 @@ export default async function DashboardPage() {
         <div className="rounded-2xl border border-black/10 bg-white p-5 dark:border-white/10 dark:bg-zinc-950">
           <div className="text-sm text-zinc-600 dark:text-zinc-400">Next</div>
           <div className="mt-1 text-sm">
-            You can now do participant entry and see reports. Next we’ll add participant list, edit, and richer sales reports.
+            Use Participants to review or remove entries. Reports includes ticket sales totals
+            {session.role === "SUPER_ADMIN" ? " by representative" : " for your batch"}.
           </div>
         </div>
       </div>
