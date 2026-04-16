@@ -22,7 +22,9 @@ export async function createBatchRepAction(formData: FormData) {
     password: formData.get("password"),
     batchId: formData.get("batchId"),
   });
-  if (!parsed.success) return { ok: false as const, error: "Invalid user data." };
+  if (!parsed.success) {
+    redirect("/admin/users?error=" + encodeURIComponent("Invalid user data."));
+  }
 
   const passwordHash = await hashPassword(parsed.data.password);
 

@@ -3,8 +3,13 @@ import { prisma } from "@/app/lib/prisma";
 import { createParticipantAction } from "@/app/participants/new/actions";
 import { ParticipantWizard } from "@/app/participants/new/ParticipantWizard";
 
-export default async function NewParticipantPage() {
+export default async function NewParticipantPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
   const session = await requireSession();
+  const { error } = await searchParams;
 
   const batches =
     session.role === "BATCH_REP" && session.batchId
@@ -21,6 +26,15 @@ export default async function NewParticipantPage() {
           First select tickets, then fill attendee information.
         </p>
       </div>
+
+      {error ? (
+        <div
+          role="alert"
+          className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200"
+        >
+          {error}
+        </div>
+      ) : null}
 
       <div className="mt-6 grid gap-4">
         <form action={createParticipantAction}>

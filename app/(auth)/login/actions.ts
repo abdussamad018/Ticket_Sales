@@ -19,11 +19,20 @@ export async function loginAction(formData: FormData) {
   });
 
   if (!parsed.success) {
-    return { ok: false as const, error: "Invalid email or password." };
+    const q = new URLSearchParams();
+    q.set("error", "Invalid email or password.");
+    const next = formData.get("next");
+    if (typeof next === "string" && next.startsWith("/")) q.set("next", next);
+    redirect("/login?" + q.toString());
   }
 
   const res = await signIn(parsed.data.email, parsed.data.password);
-  if (!res) return { ok: false as const, error: "Invalid email or password." };
+  if (!res) {
+    const q = new URLSearchParams();
+    q.set("error", "Invalid email or password.");
+    if (parsed.data.next && parsed.data.next.startsWith("/")) q.set("next", parsed.data.next);
+    redirect("/login?" + q.toString());
+  }
 
   redirect(parsed.data.next && parsed.data.next.startsWith("/") ? parsed.data.next : "/dashboard");
 }

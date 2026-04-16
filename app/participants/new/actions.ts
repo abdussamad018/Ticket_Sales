@@ -20,6 +20,10 @@ function getText(formData: FormData, key: string) {
   return typeof v === "string" ? v : "";
 }
 
+function participantFormError(message: string): never {
+  redirect("/participants/new?error=" + encodeURIComponent(message));
+}
+
 export async function createParticipantAction(formData: FormData) {
   const session = await requireSession();
 
@@ -30,16 +34,16 @@ export async function createParticipantAction(formData: FormData) {
   });
 
   if (!parsed.success) {
-    return { ok: false as const, error: "Please fill the form correctly." };
+    participantFormError("Please fill the form correctly.");
   }
 
   const batchId = parsed.data.batchId;
   if (session.role === "BATCH_REP" && session.batchId && batchId !== session.batchId) {
-    return { ok: false as const, error: "You can only add participants for your batch." };
+    participantFormError("You can only add participants for your batch.");
   }
 
   const tickets = await prisma.ticket.findMany({ where: { isActive: true } });
-  if (tickets.length === 0) return { ok: false as const, error: "No active tickets found." };
+  if (tickets.length === 0) participantFormError("No active tickets found.");
 
   const attendees: Array<{
     type: "ADULT" | "CHILD" | "INFANT";
@@ -67,7 +71,7 @@ export async function createParticipantAction(formData: FormData) {
       const tshirt = t.hasTshirt && tshirtParsed && tshirtParsed.success ? tshirtParsed.data : null;
 
       if (t.attendeeType === "ADULT") {
-        if (!name) return { ok: false as const, error: `Adult name is required for ticket "${t.name}".` };
+        if (!name) participantFormError(`Adult name is required for ticket "${t.name}".`);
         adultCount += 1;
       } else if (t.attendeeType === "CHILD") {
         childCount += 1;
@@ -85,7 +89,7 @@ export async function createParticipantAction(formData: FormData) {
     }
   }
 
-  if (attendees.length === 0) return { ok: false as const, error: "Select at least one ticket." };
+  if (attendees.length === 0) participantFormError("Select at least one ticket.");
 
   await prisma.participant.create({
     data: {

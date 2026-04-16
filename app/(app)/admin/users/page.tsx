@@ -2,9 +2,14 @@ import { requireSuperAdmin } from "@/app/lib/auth";
 import { prisma } from "@/app/lib/prisma";
 import { createBatchRepAction } from "@/app/admin/users/actions";
 
-export default async function AdminUsersPage() {
+export default async function AdminUsersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
   await requireSuperAdmin();
 
+  const { error } = await searchParams;
   const [batches, reps] = await Promise.all([
     prisma.batch.findMany({ where: { isActive: true }, orderBy: { code: "asc" } }),
     prisma.user.findMany({
@@ -20,6 +25,15 @@ export default async function AdminUsersPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Batch Representatives</h1>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">Add multiple reps per batch.</p>
       </div>
+
+      {error ? (
+        <div
+          role="alert"
+          className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200"
+        >
+          {error}
+        </div>
+      ) : null}
 
       <div className="mt-8 grid gap-4 lg:grid-cols-3">
         <section className="rounded-2xl border border-black/10 bg-white p-5 dark:border-white/10 dark:bg-zinc-950">

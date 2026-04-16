@@ -18,7 +18,9 @@ export async function createBatchAction(formData: FormData) {
     code: formData.get("code"),
     name: (formData.get("name") as string | null) ?? undefined,
   });
-  if (!parsed.success) return { ok: false as const, error: "Invalid batch data." };
+  if (!parsed.success) {
+    redirect("/admin/batches?error=" + encodeURIComponent("Invalid batch data."));
+  }
 
   await prisma.batch.create({
     data: {

@@ -2,9 +2,14 @@ import { requireSuperAdmin } from "@/app/lib/auth";
 import { prisma } from "@/app/lib/prisma";
 import { createBatchAction } from "@/app/admin/batches/actions";
 
-export default async function AdminBatchesPage() {
+export default async function AdminBatchesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
   await requireSuperAdmin();
 
+  const { error } = await searchParams;
   const batches = await prisma.batch.findMany({ orderBy: { code: "asc" } });
 
   return (
@@ -13,6 +18,15 @@ export default async function AdminBatchesPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Batches</h1>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">Create and manage batches.</p>
       </div>
+
+      {error ? (
+        <div
+          role="alert"
+          className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200"
+        >
+          {error}
+        </div>
+      ) : null}
 
       <div className="mt-8 grid gap-4 lg:grid-cols-3">
         <section className="rounded-2xl border border-black/10 bg-white p-5 dark:border-white/10 dark:bg-zinc-950">

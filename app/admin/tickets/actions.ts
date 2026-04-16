@@ -33,7 +33,9 @@ export async function createTicketAction(formData: FormData) {
     attendeeType: formData.get("attendeeType"),
     hasTshirt: checkboxOn(formData, "hasTshirt"),
   });
-  if (!parsed.success) return { ok: false as const, error: "Invalid ticket data." };
+  if (!parsed.success) {
+    redirect("/admin/tickets?error=" + encodeURIComponent("Invalid ticket data."));
+  }
 
   await prisma.ticket.create({
     data: {

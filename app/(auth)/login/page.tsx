@@ -5,9 +5,9 @@ import { loginAction } from "@/app/(auth)/login/actions";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; error?: string }>;
 }) {
-  const { next } = await searchParams;
+  const { next, error } = await searchParams;
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-10">
@@ -18,6 +18,15 @@ export default async function LoginPage({
             Alumni Event entry & reporting system
           </p>
         </div>
+
+        {error ? (
+          <div
+            role="alert"
+            className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200"
+          >
+            {error}
+          </div>
+        ) : null}
 
         <form action={loginAction} className="mt-6 space-y-4">
           <input type="hidden" name="next" value={next ?? ""} />
