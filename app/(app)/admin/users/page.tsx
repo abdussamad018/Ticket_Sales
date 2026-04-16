@@ -1,6 +1,7 @@
 import { requireSuperAdmin } from "@/app/lib/auth";
 import { prisma } from "@/app/lib/prisma";
 import { createBatchRepAction } from "@/app/admin/users/actions";
+import { SubmitButton } from "@/app/ui/SubmitButton";
 
 export default async function AdminUsersPage({
   searchParams,
@@ -97,9 +98,12 @@ export default async function AdminUsersPage({
               />
             </div>
 
-            <button className="h-11 w-full rounded-xl bg-black px-5 text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90">
+            <SubmitButton
+              pendingText="Creating…"
+              className="h-11 w-full rounded-xl bg-black px-5 text-white hover:bg-black/90 disabled:opacity-70 dark:bg-white dark:text-black dark:hover:bg-white/90"
+            >
               Create
-            </button>
+            </SubmitButton>
           </form>
         </section>
 

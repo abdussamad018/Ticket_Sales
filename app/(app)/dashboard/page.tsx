@@ -1,7 +1,6 @@
-import Link from "next/link";
-
 import { requireSession } from "@/app/lib/auth";
 import { prisma } from "@/app/lib/prisma";
+import { LoadingLinkButton } from "@/app/ui/LoadingLinkButton";
 
 export default async function DashboardPage() {
   const session = await requireSession();
@@ -26,31 +25,35 @@ export default async function DashboardPage() {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Link
+          <LoadingLinkButton
             className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
             href="/participants"
+            pendingText="Loading…"
           >
             Participants
-          </Link>
-          <Link
+          </LoadingLinkButton>
+          <LoadingLinkButton
             className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
             href="/participants/new"
+            pendingText="Loading…"
           >
             Add participant
-          </Link>
-          <Link
+          </LoadingLinkButton>
+          <LoadingLinkButton
             className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
             href="/reports"
+            pendingText="Loading…"
           >
             Reports
-          </Link>
+          </LoadingLinkButton>
           {session.role === "SUPER_ADMIN" ? (
-            <Link
+            <LoadingLinkButton
               className="inline-flex h-10 items-center rounded-xl bg-black px-4 text-sm text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
               href="/admin"
+              pendingText="Loading…"
             >
               Admin
-            </Link>
+            </LoadingLinkButton>
           ) : null}
         </div>
       </div>
@@ -64,15 +67,15 @@ export default async function DashboardPage() {
         <div className="rounded-2xl border border-black/10 bg-white p-5 dark:border-white/10 dark:bg-zinc-950">
           <div className="text-sm text-zinc-600 dark:text-zinc-400">Quick actions</div>
           <div className="mt-3 flex flex-col gap-2 text-sm">
-            <Link className="underline underline-offset-4" href="/participants">
+            <LoadingLinkButton className="w-fit underline underline-offset-4" href="/participants" pendingText="Loading…">
               View participant list
-            </Link>
-            <Link className="underline underline-offset-4" href="/participants/new">
+            </LoadingLinkButton>
+            <LoadingLinkButton className="w-fit underline underline-offset-4" href="/participants/new" pendingText="Loading…">
               Create participant entry
-            </Link>
-            <Link className="underline underline-offset-4" href="/reports">
+            </LoadingLinkButton>
+            <LoadingLinkButton className="w-fit underline underline-offset-4" href="/reports" pendingText="Loading…">
               View reports & sales
-            </Link>
+            </LoadingLinkButton>
           </div>
         </div>
 

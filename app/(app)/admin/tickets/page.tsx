@@ -2,6 +2,7 @@ import { requireSuperAdmin } from "@/app/lib/auth";
 import { prisma } from "@/app/lib/prisma";
 import { createTicketAction, updateTicketAction } from "@/app/admin/tickets/actions";
 import { DeleteTicketButton } from "./delete-ticket-button";
+import { SubmitButton } from "@/app/ui/SubmitButton";
 
 const inputClass =
   "h-9 w-full min-w-0 rounded-lg border border-black/10 bg-transparent px-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:focus:border-white/30";
@@ -101,9 +102,12 @@ export default async function AdminTicketsPage({
                 placeholder="1000"
               />
             </div>
-            <button className="h-11 w-full rounded-xl bg-black px-5 text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90">
+            <SubmitButton
+              pendingText="Creating…"
+              className="h-11 w-full rounded-xl bg-black px-5 text-white hover:bg-black/90 disabled:opacity-70 dark:bg-white dark:text-black dark:hover:bg-white/90"
+            >
               Create
-            </button>
+            </SubmitButton>
           </form>
         </section>
 
@@ -182,12 +186,12 @@ export default async function AdminTicketsPage({
                             />
                             Active
                           </label>
-                          <button
-                            type="submit"
-                            className="h-9 shrink-0 rounded-lg bg-black px-4 text-sm text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+                          <SubmitButton
+                            pendingText="Saving…"
+                            className="h-9 shrink-0 rounded-lg bg-black px-4 text-sm text-white hover:bg-black/90 disabled:opacity-70 dark:bg-white dark:text-black dark:hover:bg-white/90"
                           >
                             Save
-                          </button>
+                          </SubmitButton>
                         </form>
                         <DeleteTicketButton ticketId={t.id} ticketLabel={t.code} />
                       </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { SubmitButton } from "@/app/ui/SubmitButton";
 
 type BatchOption = { id: string; code: string };
 type TicketOption = {
@@ -297,9 +298,12 @@ export function ParticipantWizard({
             </div>
 
             <div className="flex justify-end">
-              <button className="h-11 rounded-xl bg-black px-5 text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90">
+              <SubmitButton
+                pendingText="Saving…"
+                className="h-11 rounded-xl bg-black px-5 text-white hover:bg-black/90 disabled:opacity-70 dark:bg-white dark:text-black dark:hover:bg-white/90"
+              >
                 Save entry
-              </button>
+              </SubmitButton>
             </div>
           </div>
         </section>

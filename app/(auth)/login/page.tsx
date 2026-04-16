@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { loginAction } from "@/app/(auth)/login/actions";
+import { SubmitButton } from "@/app/ui/SubmitButton";
 
 export default async function LoginPage({
   searchParams,
@@ -59,9 +60,12 @@ export default async function LoginPage({
             />
           </div>
 
-          <button className="h-11 w-full rounded-xl bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90">
+          <SubmitButton
+            pendingText="Signing in…"
+            className="h-11 w-full rounded-xl bg-black text-white hover:bg-black/90 disabled:opacity-70 dark:bg-white dark:text-black dark:hover:bg-white/90"
+          >
             Sign in
-          </button>
+          </SubmitButton>
         </form>
 
         <div className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
