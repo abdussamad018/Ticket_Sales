@@ -1,3 +1,5 @@
+import type { Batch } from "@prisma/client";
+
 import { requireSuperAdmin } from "@/app/lib/auth";
 import { prisma } from "@/app/lib/prisma";
 import { createBatchAction } from "@/app/admin/batches/actions";
@@ -10,7 +12,7 @@ export default async function AdminBatchesPage({
   await requireSuperAdmin();
 
   const { error } = await searchParams;
-  const batches = await prisma.batch.findMany({ orderBy: { code: "asc" } });
+  const batches: Batch[] = await prisma.batch.findMany({ orderBy: { code: "asc" } });
 
   return (
     <div className="mx-auto w-full max-w-6xl px-0 py-0">
