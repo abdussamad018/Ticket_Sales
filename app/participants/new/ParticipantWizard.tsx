@@ -28,7 +28,9 @@ function CounterRow({
     <div className="flex items-center justify-between gap-3 border-b border-black/5 py-4 last:border-b-0 dark:border-white/10">
       <div>
         <div className="text-sm font-semibold">{title}</div>
-        <div className="text-xs text-zinc-500 dark:text-zinc-400">{subtitle}</div>
+        <div className="text-xs text-zinc-500 dark:text-zinc-400">
+          {subtitle}
+        </div>
       </div>
       <div className="flex items-center gap-2">
         <button
@@ -39,7 +41,9 @@ function CounterRow({
         >
           –
         </button>
-        <div className="w-8 text-center text-sm font-semibold tabular-nums">{value}</div>
+        <div className="w-8 text-center text-sm font-semibold tabular-nums">
+          {value}
+        </div>
         <button
           type="button"
           onClick={() => onChange(Math.min(20, value + 1))}
@@ -87,7 +91,11 @@ export function ParticipantWizard({
   });
 
   const totalSelected = useMemo(
-    () => Object.values(counts).reduce((sum, v) => sum + (Number.isFinite(v) ? v : 0), 0),
+    () =>
+      Object.values(counts).reduce(
+        (sum, v) => sum + (Number.isFinite(v) ? v : 0),
+        0,
+      ),
     [counts],
   );
   const canNext = totalSelected > 0;
@@ -122,7 +130,7 @@ export function ParticipantWizard({
   return (
     <div className="grid gap-4">
       <section className="rounded-2xl border border-black/10 bg-white p-5 dark:border-white/10 dark:bg-zinc-950">
-        <h2 className="text-base font-semibold">1) Select tickets</h2>
+        <h2 className="text-base font-semibold">1) টিকিট নির্বাচন করুন</h2>
         <div className="mt-4">
           {ticketsSorted.map((t) => (
             <CounterRow
@@ -137,7 +145,7 @@ export function ParticipantWizard({
 
         <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-xs text-zinc-500 dark:text-zinc-400">
-            {selectedSummary || "Select at least one ticket."}
+            {selectedSummary || "অন্তত একটি টিকিট বাছাই করুন।"}
           </div>
           <button
             type="button"
@@ -154,9 +162,11 @@ export function ParticipantWizard({
         <section className="rounded-2xl border border-black/10 bg-white p-5 dark:border-white/10 dark:bg-zinc-950">
           <div className="flex items-end justify-between gap-2">
             <div>
-              <h2 className="text-base font-semibold">2) Attendee information</h2>
+              <h2 className="text-base font-semibold">
+                2) অংশগ্রহণকারীদের তথ্য
+              </h2>
               <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                Fill details for each Adult and Child. Child name is optional.
+              প্রত্যেক প্রাপ্তবয়স্ক ও শিশুর বিবরণ পূরণ করুন। শিশুর নাম ঐচ্ছিক।
               </p>
             </div>
             <button
@@ -175,7 +185,11 @@ export function ParticipantWizard({
                   Batch
                 </label>
                 {batchLocked ? (
-                  <input type="hidden" name="batchId" value={defaultBatchId ?? batches[0]?.id ?? ""} />
+                  <input
+                    type="hidden"
+                    name="batchId"
+                    value={defaultBatchId ?? batches[0]?.id ?? ""}
+                  />
                 ) : null}
                 <select
                   id="batchId"
@@ -194,7 +208,10 @@ export function ParticipantWizard({
               </div>
 
               <div className="space-y-1">
-                <label className="text-sm font-medium" htmlFor="paymentScreenshotUrl">
+                <label
+                  className="text-sm font-medium"
+                  htmlFor="paymentScreenshotUrl"
+                >
                   Payment screenshot URL
                 </label>
                 <input
@@ -208,81 +225,103 @@ export function ParticipantWizard({
             </div>
 
             {ticketsSorted.map((t) => (
-              <input key={t.id} type="hidden" name={`ticketCount_${t.id}`} value={counts[t.id] ?? 0} />
+              <input
+                key={t.id}
+                type="hidden"
+                name={`ticketCount_${t.id}`}
+                value={counts[t.id] ?? 0}
+              />
             ))}
 
             {ticketsSorted
               .filter((t) => (counts[t.id] ?? 0) > 0)
               .flatMap((t) =>
-                Array.from({ length: counts[t.id] ?? 0 }, (_, i) => i).map((i) => {
-                  const title =
-                    t.attendeeType === "ADULT"
-                      ? `${t.name} (Adult) #${i + 1}`
-                      : t.attendeeType === "CHILD"
-                        ? `${t.name} (Child) #${i + 1}`
-                        : `${t.name} (Infant) #${i + 1}`;
-                  const keyBase = `attendee_${t.id}_${i}`;
+                Array.from({ length: counts[t.id] ?? 0 }, (_, i) => i).map(
+                  (i) => {
+                    const title =
+                      t.attendeeType === "ADULT"
+                        ? `${t.name} (Adult) #${i + 1}`
+                        : t.attendeeType === "CHILD"
+                          ? `${t.name} (Child) #${i + 1}`
+                          : `${t.name} (Infant) #${i + 1}`;
+                    const keyBase = `attendee_${t.id}_${i}`;
 
-                  return (
-                    <div key={`${t.id}_${i}`} className="rounded-2xl border border-black/10 p-4 dark:border-white/10">
-                      <div className="text-sm font-semibold">{title}</div>
+                    return (
+                      <div
+                        key={`${t.id}_${i}`}
+                        className="rounded-2xl border border-black/10 p-4 dark:border-white/10"
+                      >
+                        <div className="text-sm font-semibold">{title}</div>
 
-                      <div className="mt-3 grid gap-4 sm:grid-cols-2">
-                        <div className="space-y-1 sm:col-span-2">
-                          <label className="text-sm font-medium" htmlFor={`${keyBase}_fullName`}>
-                            Name{t.attendeeType === "ADULT" ? "" : " (optional)"}
-                          </label>
-                          <input
-                            id={`${keyBase}_fullName`}
-                            name={`${keyBase}_fullName`}
-                            required={t.attendeeType === "ADULT"}
-                            className="h-11 w-full rounded-xl border border-black/10 bg-transparent px-3 outline-none focus:border-black/30 dark:border-white/10 dark:focus:border-white/30"
-                            placeholder="Name"
-                          />
-                        </div>
-
-                        {t.attendeeType === "ADULT" ? (
-                          <div className="space-y-1">
-                            <label className="text-sm font-medium" htmlFor={`${keyBase}_phone`}>
-                              Phone (optional)
+                        <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                          <div className="space-y-1 sm:col-span-2">
+                            <label
+                              className="text-sm font-medium"
+                              htmlFor={`${keyBase}_fullName`}
+                            >
+                              Name
+                              {t.attendeeType === "ADULT" ? "" : " (optional)"}
                             </label>
                             <input
-                              id={`${keyBase}_phone`}
-                              name={`${keyBase}_phone`}
+                              id={`${keyBase}_fullName`}
+                              name={`${keyBase}_fullName`}
+                              required={t.attendeeType === "ADULT"}
                               className="h-11 w-full rounded-xl border border-black/10 bg-transparent px-3 outline-none focus:border-black/30 dark:border-white/10 dark:focus:border-white/30"
-                              placeholder="01XXXXXXXXX"
+                              placeholder="Name"
                             />
                           </div>
-                        ) : null}
 
-                        <div className="space-y-1">
-                          <label className="text-sm font-medium" htmlFor={`${keyBase}_tshirt`}>
-                            T-shirt size (optional)
-                          </label>
-                          {t.hasTshirt ? (
-                            <select
-                              id={`${keyBase}_tshirt`}
-                              name={`${keyBase}_tshirt`}
-                              className="h-11 w-full rounded-xl border border-black/10 bg-white px-3 text-zinc-900 outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-white/30 dark:[color-scheme:dark]"
-                              defaultValue=""
-                            >
-                              <option value="">Select...</option>
-                              {["XS", "S", "M", "L", "XL", "XXL", "XXXL"].map((s) => (
-                                <option key={s} value={s}>
-                                  {s}
-                                </option>
-                              ))}
-                            </select>
-                          ) : (
-                            <div className="flex h-11 items-center rounded-xl border border-black/10 bg-black/5 px-3 text-sm text-zinc-600 dark:border-white/10 dark:bg-white/10 dark:text-zinc-300">
-                              Not applicable for this ticket
+                          {t.attendeeType === "ADULT" ? (
+                            <div className="space-y-1">
+                              <label
+                                className="text-sm font-medium"
+                                htmlFor={`${keyBase}_phone`}
+                              >
+                                Phone (optional)
+                              </label>
+                              <input
+                                id={`${keyBase}_phone`}
+                                name={`${keyBase}_phone`}
+                                className="h-11 w-full rounded-xl border border-black/10 bg-transparent px-3 outline-none focus:border-black/30 dark:border-white/10 dark:focus:border-white/30"
+                                placeholder="01XXXXXXXXX"
+                              />
                             </div>
-                          )}
+                          ) : null}
+
+                          <div className="space-y-1">
+                            <label
+                              className="text-sm font-medium"
+                              htmlFor={`${keyBase}_tshirt`}
+                            >
+                              T-shirt size (optional)
+                            </label>
+                            {t.hasTshirt ? (
+                              <select
+                                id={`${keyBase}_tshirt`}
+                                name={`${keyBase}_tshirt`}
+                                className="h-11 w-full rounded-xl border border-black/10 bg-white px-3 text-zinc-900 outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-white/30 dark:[color-scheme:dark]"
+                                defaultValue=""
+                              >
+                                <option value="">Select...</option>
+                                {["XS", "S", "M", "L", "XL", "XXL", "XXXL"].map(
+                                  (s) => (
+                                    <option key={s} value={s}>
+                                      {s}
+                                    </option>
+                                  ),
+                                )}
+                              </select>
+                            ) : (
+                              <div className="flex h-11 items-center rounded-xl border border-black/10 bg-black/5 px-3 text-sm text-zinc-600 dark:border-white/10 dark:bg-white/10 dark:text-zinc-300">
+                                Not applicable for this ticket
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                }),
+                    );
+                  },
+                ),
               )}
 
             <div className="space-y-1">
@@ -311,4 +350,3 @@ export function ParticipantWizard({
     </div>
   );
 }
-
