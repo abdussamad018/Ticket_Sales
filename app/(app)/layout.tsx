@@ -35,7 +35,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between gap-3 px-4">
           <div className="flex items-center gap-3">
             <Link href="/dashboard" className="text-sm font-semibold tracking-tight">
-              Alumni Event
+            অভিষেক ও ঈদ পুনর্মিলনী
             </Link>
           </div>
 
