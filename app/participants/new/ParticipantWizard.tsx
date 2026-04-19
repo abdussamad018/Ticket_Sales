@@ -82,7 +82,7 @@ export function ParticipantWizard({
     const init: Record<string, number> = {};
     // Default: first ADULT ticket = 1 (common path)
     const firstAdult = ticketsSorted.find((t) => t.attendeeType === "ADULT");
-    if (firstAdult) init[firstAdult.id] = 1;
+    if (firstAdult) init[firstAdult.id] = 0; // Initialize with 0 to allow selecting 0 tickets
     return init;
   });
 
@@ -102,9 +102,9 @@ export function ParticipantWizard({
   }, [counts, ticketsSorted]);
 
   function subtitleFor(type: TicketOption["attendeeType"]) {
-    if (type === "ADULT") return "12 years and above";
-    if (type === "CHILD") return "2–11 years";
-    return "Below 2 years";
+    if (type === "ADULT") return "";
+    if (type === "CHILD") return "";
+    return "";
   }
 
   function setCount(ticketId: string, next: number) {
