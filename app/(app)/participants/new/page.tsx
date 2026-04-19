@@ -25,9 +25,11 @@ export default async function NewParticipantPage({
   return (
     <div className="mx-auto w-full max-w-3xl px-0 py-0">
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Add participant</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          অংশগ্রহণকারী যোগ করুন
+        </h1>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          First select tickets, then fill attendee information.
+          প্রথমে টিকিট নির্বাচন করুন, তারপর অংশগ্রহণকারীর তথ্য পূরণ করুন।
         </p>
       </div>
 
@@ -36,15 +38,16 @@ export default async function NewParticipantPage({
           role="alert"
           className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200"
         >
+          <span className="font-medium">ত্রুটি: </span>
           {error}
         </div>
       ) : null}
 
       {closedForRep ? (
         <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100">
-          <div className="font-semibold">Close Registration</div>
+          <div className="font-semibold">নিবন্ধন বন্ধ</div>
           <div className="mt-1 text-amber-800 dark:text-amber-200">
-            Registration is currently closed by admin. Please contact admin if you need to add entries.
+            প্রশাসক নিবন্ধন বন্ধ রেখেছেন। প্রয়োজনে প্রশাসকের সাথে যোগাযোগ করুন।
           </div>
         </div>
       ) : null}

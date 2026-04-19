@@ -13,6 +13,23 @@ type TicketOption = {
   hasTshirt: boolean;
 };
 
+/** Display order for reunion tickets (Alumni first, then spouse, then children). */
+const TICKET_CODE_ORDER = [
+  "ALUMNI",
+  "GUEST",
+  "KID_05_12",
+  "KID_00_05",
+] as const;
+
+function ticketDisplayOrder(code: string): number {
+  const i = (TICKET_CODE_ORDER as readonly string[]).indexOf(code);
+  return i === -1 ? 1000 : i;
+}
+
+function bnNum(n: number): string {
+  return n.toLocaleString("bn-BD");
+}
+
 function CounterRow({
   title,
   subtitle,
@@ -37,7 +54,7 @@ function CounterRow({
           type="button"
           onClick={() => onChange(Math.max(0, value - 1))}
           className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-black/10 bg-white text-lg leading-none hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
-          aria-label={`Decrease ${title}`}
+          aria-label={`${title} কমান`}
         >
           –
         </button>
@@ -48,7 +65,7 @@ function CounterRow({
           type="button"
           onClick={() => onChange(Math.min(20, value + 1))}
           className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-black/10 bg-white text-lg leading-none hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
-          aria-label={`Increase ${title}`}
+          aria-label={`${title} বাড়ান`}
         >
           +
         </button>
@@ -72,6 +89,8 @@ export function ParticipantWizard({
 
   const ticketsSorted = useMemo(() => {
     return [...tickets].sort((a, b) => {
+      const byCode = ticketDisplayOrder(a.code) - ticketDisplayOrder(b.code);
+      if (byCode !== 0) return byCode;
       const typeOrder = (t: TicketOption["attendeeType"]) =>
         t === "ADULT" ? 0 : t === "CHILD" ? 1 : 2;
       const byType = typeOrder(a.attendeeType) - typeOrder(b.attendeeType);
@@ -100,13 +119,22 @@ export function ParticipantWizard({
   );
   const canNext = totalSelected > 0;
 
-  const selectedSummary = useMemo(() => {
+  const { selectedSummaryText, selectedTotal } = useMemo(() => {
     const parts: string[] = [];
+    let total = 0;
     for (const t of ticketsSorted) {
       const c = counts[t.id] ?? 0;
-      if (c > 0) parts.push(`${t.name}×${c}=${t.price}*${c}`);
+      if (c <= 0) continue;
+      const line = t.price * c;
+      total += line;
+      parts.push(
+        `${t.name} × ${bnNum(c)} = ${bnNum(t.price)} × ${bnNum(c)} = ${bnNum(line)}`,
+      );
     }
-    return parts.join(", ");
+    return {
+      selectedSummaryText: parts.join(" · "),
+      selectedTotal: total,
+    };
   }, [counts, ticketsSorted]);
 
   function subtitleFor(type: TicketOption["attendeeType"]) {
@@ -145,7 +173,16 @@ export function ParticipantWizard({
 
         <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-xs text-zinc-500 dark:text-zinc-400">
-            {selectedSummary || "অন্তত একটি টিকিট বাছাই করুন।"}
+            {!selectedSummaryText ? (
+              "অন্তত একটি টিকিট বাছাই করুন।"
+            ) : (
+              <>
+                <span>{selectedSummaryText}</span>
+                <span className="mt-1 block font-semibold text-zinc-700 dark:text-zinc-200">
+                  মোট: {bnNum(selectedTotal)} টাকা
+                </span>
+              </>
+            )}
           </div>
           <button
             type="button"
@@ -153,7 +190,7 @@ export function ParticipantWizard({
             onClick={() => setStep(2)}
             className="h-10 rounded-xl bg-black px-4 text-sm text-white hover:bg-black/90 disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-white/90"
           >
-            Next
+            পরবর্তী
           </button>
         </div>
       </section>
@@ -174,7 +211,7 @@ export function ParticipantWizard({
               onClick={() => setStep(1)}
               className="h-10 rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
             >
-              Back
+              পিছনে
             </button>
           </div>
 
@@ -182,7 +219,7 @@ export function ParticipantWizard({
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1">
                 <label className="text-sm font-medium" htmlFor="batchId">
-                  Batch
+                  ব্যাচ
                 </label>
                 {batchLocked ? (
                   <input
@@ -212,7 +249,7 @@ export function ParticipantWizard({
                   className="text-sm font-medium"
                   htmlFor="paymentScreenshotUrl"
                 >
-                  Payment screenshot URL
+                  পরিশোধের স্ক্রিনশটের লিংক (URL)
                 </label>
                 <input
                   id="paymentScreenshotUrl"
@@ -240,10 +277,10 @@ export function ParticipantWizard({
                   (i) => {
                     const title =
                       t.attendeeType === "ADULT"
-                        ? `${t.name} (Adult) #${i + 1}`
+                        ? `${t.name} (প্রাপ্তবয়স্ক) #${bnNum(i + 1)}`
                         : t.attendeeType === "CHILD"
-                          ? `${t.name} (Child) #${i + 1}`
-                          : `${t.name} (Infant) #${i + 1}`;
+                          ? `${t.name} (শিশু) #${bnNum(i + 1)}`
+                          : `${t.name} (শিশু — ০–৫) #${bnNum(i + 1)}`;
                     const keyBase = `attendee_${t.id}_${i}`;
 
                     return (
@@ -259,15 +296,17 @@ export function ParticipantWizard({
                               className="text-sm font-medium"
                               htmlFor={`${keyBase}_fullName`}
                             >
-                              Name
-                              {t.attendeeType === "ADULT" ? "" : " (optional)"}
+                              নাম
+                              {t.attendeeType === "ADULT"
+                                ? ""
+                                : " (ঐচ্ছিক)"}
                             </label>
                             <input
                               id={`${keyBase}_fullName`}
                               name={`${keyBase}_fullName`}
                               required={t.attendeeType === "ADULT"}
                               className="h-11 w-full rounded-xl border border-black/10 bg-transparent px-3 outline-none focus:border-black/30 dark:border-white/10 dark:focus:border-white/30"
-                              placeholder="Name"
+                              placeholder="পূর্ণ নাম"
                             />
                           </div>
 
@@ -277,7 +316,7 @@ export function ParticipantWizard({
                                 className="text-sm font-medium"
                                 htmlFor={`${keyBase}_phone`}
                               >
-                                Phone (optional)
+                                মোবাইল (ঐচ্ছিক)
                               </label>
                               <input
                                 id={`${keyBase}_phone`}
@@ -293,7 +332,7 @@ export function ParticipantWizard({
                               className="text-sm font-medium"
                               htmlFor={`${keyBase}_tshirt`}
                             >
-                              T-shirt size (optional)
+                              টি-শার্ট সাইজ (ঐচ্ছিক)
                             </label>
                             {t.hasTshirt ? (
                               <select
@@ -302,7 +341,7 @@ export function ParticipantWizard({
                                 className="h-11 w-full rounded-xl border border-black/10 bg-white px-3 text-zinc-900 outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-white/30 dark:[color-scheme:dark]"
                                 defaultValue=""
                               >
-                                <option value="">Select...</option>
+                                <option value="">নির্বাচন করুন…</option>
                                 {["XS", "S", "M", "L", "XL", "XXL", "XXXL"].map(
                                   (s) => (
                                     <option key={s} value={s}>
@@ -313,7 +352,7 @@ export function ParticipantWizard({
                               </select>
                             ) : (
                               <div className="flex h-11 items-center rounded-xl border border-black/10 bg-black/5 px-3 text-sm text-zinc-600 dark:border-white/10 dark:bg-white/10 dark:text-zinc-300">
-                                Not applicable for this ticket
+                                এই টিকিটের জন্য প্রযোজ্য নয়
                               </div>
                             )}
                           </div>
@@ -326,22 +365,22 @@ export function ParticipantWizard({
 
             <div className="space-y-1">
               <label className="text-sm font-medium" htmlFor="notes">
-                Notes (optional)
+                মন্তব্য (ঐচ্ছিক)
               </label>
               <textarea
                 id="notes"
                 name="notes"
                 className="min-h-24 w-full resize-y rounded-xl border border-black/10 bg-transparent px-3 py-2 outline-none focus:border-black/30 dark:border-white/10 dark:focus:border-white/30"
-                placeholder="Any extra info…"
+                placeholder="অতিরিক্ত তথ্য থাকলে লিখুন…"
               />
             </div>
 
             <div className="flex justify-end">
               <SubmitButton
-                pendingText="Saving…"
+                pendingText="সংরক্ষণ হচ্ছে…"
                 className="h-11 rounded-xl bg-black px-5 text-white hover:bg-black/90 disabled:opacity-70 dark:bg-white dark:text-black dark:hover:bg-white/90"
               >
-                Save entry
+                সংরক্ষণ করুন
               </SubmitButton>
             </div>
           </div>
