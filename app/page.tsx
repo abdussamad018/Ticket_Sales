@@ -124,7 +124,7 @@ export default function Home() {
         <header className="mb-8 flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:text-left">
           <div className="shrink-0 rounded-full border-2 border-white bg-white p-1 shadow-md ring-2 ring-[#004A99]/20">
             <Image
-              src="/kmlhsaa-mark.svg"
+              src="/kmlhsaa_logo.jpg"
               alt="KMLHSAA"
               width={56}
               height={56}
