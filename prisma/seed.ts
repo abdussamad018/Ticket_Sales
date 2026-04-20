@@ -47,6 +47,44 @@ async function main() {
     });
   }
 
+  // Batch representatives (one per batch year)
+  // Format:
+  // - User: SSC-YYYY
+  // - Email: YYYY@kmlhsaa.com
+  // - Password: forced 6-digit derived from year
+  for (let i = startYear; i < currentYear; i++) {
+    const email = `${i}@kmlhsaa.com`;
+    const password = (i + 100000).toString().slice(-6);
+    const repPasswordHash = await hash(password, 12);
+
+    const batch = await prisma.batch.findUnique({ where: { code: String(i) } });
+    if (!batch) continue;
+
+    await prisma.user.upsert({
+      where: { email },
+      update: {
+        name: `SSC-${i}`,
+        role: "BATCH_REP",
+        passwordHash: repPasswordHash,
+        isActive: true,
+        batchId: batch.id,
+      },
+      create: {
+        name: `SSC-${i}`,
+        email,
+        role: "BATCH_REP",
+        passwordHash: repPasswordHash,
+        isActive: true,
+        batchId: batch.id,
+      },
+    });
+
+    console.log(`User: SSC-${i}`);
+    console.log(`Email: ${email}`);
+    console.log(`Password: ${password}`);
+    console.log("---");
+  }
+
   const tickets = [
     { code: "ALUMNI", name: "Per Alumni", price: 500, attendeeType: "ADULT" as const, hasTshirt: true },
     { code: "GUEST", name: "Spouse/Guest/Parents", price: 500, attendeeType: "ADULT" as const, hasTshirt: true },

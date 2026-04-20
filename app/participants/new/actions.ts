@@ -11,7 +11,6 @@ type TshirtSize = z.infer<typeof sizeSchema>;
 
 const baseSchema = z.object({
   batchId: z.string().min(1),
-  paymentScreenshotUrl: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -35,7 +34,6 @@ export async function createParticipantAction(formData: FormData) {
 
   const parsed = baseSchema.safeParse({
     batchId: formData.get("batchId"),
-    paymentScreenshotUrl: getText(formData, "paymentScreenshotUrl"),
     notes: getText(formData, "notes"),
   });
 
@@ -74,6 +72,12 @@ export async function createParticipantAction(formData: FormData) {
       const phone = getText(formData, `${keyBase}_phone`).trim();
       const tshirtRaw = getText(formData, `${keyBase}_tshirt`).trim();
       const tshirtParsed = tshirtRaw ? sizeSchema.safeParse(tshirtRaw) : null;
+      if (t.hasTshirt && !tshirtRaw) {
+        participantFormError(`T-shirt size is required for ticket "${t.name}".`);
+      }
+      if (t.hasTshirt && (!tshirtParsed || !tshirtParsed.success)) {
+        participantFormError(`Please select a valid T-shirt size for ticket "${t.name}".`);
+      }
       const tshirt = t.hasTshirt && tshirtParsed && tshirtParsed.success ? tshirtParsed.data : null;
 
       if (t.attendeeType === "ADULT") {
@@ -104,7 +108,6 @@ export async function createParticipantAction(formData: FormData) {
       childCount,
       infantCount,
       totalChildrenAttending: childCount,
-      paymentScreenshotUrl: parsed.data.paymentScreenshotUrl?.trim() || null,
       notes: parsed.data.notes?.trim() || null,
       createdById: session.userId,
       attendees: {

@@ -243,22 +243,6 @@ export function ParticipantWizard({
                   ))}
                 </select>
               </div>
-
-              <div className="space-y-1">
-                <label
-                  className="text-sm font-medium"
-                  htmlFor="paymentScreenshotUrl"
-                >
-                  পরিশোধের স্ক্রিনশটের লিংক (URL)
-                </label>
-                <input
-                  id="paymentScreenshotUrl"
-                  name="paymentScreenshotUrl"
-                  type="url"
-                  className="h-11 w-full rounded-xl border border-black/10 bg-transparent px-3 outline-none focus:border-black/30 dark:border-white/10 dark:focus:border-white/30"
-                  placeholder="/uploads/payments/..."
-                />
-              </div>
             </div>
 
             {ticketsSorted.map((t) => (
@@ -332,16 +316,19 @@ export function ParticipantWizard({
                               className="text-sm font-medium"
                               htmlFor={`${keyBase}_tshirt`}
                             >
-                              টি-শার্ট সাইজ (ঐচ্ছিক)
+                              টি-শার্ট সাইজ
                             </label>
                             {t.hasTshirt ? (
                               <select
                                 id={`${keyBase}_tshirt`}
                                 name={`${keyBase}_tshirt`}
+                                required
                                 className="h-11 w-full rounded-xl border border-black/10 bg-white px-3 text-zinc-900 outline-none focus:border-black/30 dark:border-white/10 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-white/30 dark:[color-scheme:dark]"
                                 defaultValue=""
                               >
-                                <option value="">নির্বাচন করুন…</option>
+                                <option value="" disabled>
+                                  নির্বাচন করুন…
+                                </option>
                                 {["XS", "S", "M", "L", "XL", "XXL", "XXXL"].map(
                                   (s) => (
                                     <option key={s} value={s}>
