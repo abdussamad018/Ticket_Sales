@@ -7,10 +7,8 @@ function isYearBatchCode(code: string): boolean {
   return /^\d{4}$/.test(code);
 }
 
-
-
-export async function Get(req: Request) {
- 
+/** No auth — anyone with the URL can run this. Remove or lock down after seeding. */
+export async function GET() {
   try {
     const batches = await prisma.batch.findMany({
       where: { isActive: true },
@@ -18,7 +16,7 @@ export async function Get(req: Request) {
     });
 
     const currentYear = new Date().getFullYear();
-    const results = [];
+    const results: Array<{ email: string; name: string | null }> = [];
 
     for (const batch of batches) {
       if (!isYearBatchCode(batch.code)) continue;
