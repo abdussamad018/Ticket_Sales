@@ -101,7 +101,7 @@ export async function createParticipantAction(formData: FormData) {
 
   if (attendees.length === 0) participantFormError("Select at least one ticket.");
 
-  await prisma.participant.create({
+  const created = await prisma.participant.create({
     data: {
       batchId,
       adultCount,
@@ -124,6 +124,6 @@ export async function createParticipantAction(formData: FormData) {
     },
   });
 
-  redirect("/dashboard");
+  redirect(`/participants/new/confirm?id=${encodeURIComponent(created.id)}`);
 }
 
