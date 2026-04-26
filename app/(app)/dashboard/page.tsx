@@ -101,26 +101,26 @@ export default async function DashboardPage() {
     }
   }
 
-  let batchLeaderboard: { code: string; count: number }[] = [];
+  let batchLeaderboard: { batchId: string; code: string; count: number }[] = [];
   if (session.role === "SUPER_ADMIN") {
-    const byBatch = await prisma.participant.groupBy({
-      by: ["batchId"],
-      _count: { _all: true },
+    const attendeesByBatch = await prisma.attendee.findMany({
+      where: { participant: participantScopeWhere(session) },
+      select: {
+        participant: { select: { batchId: true, batch: { select: { code: true } } } },
+      },
     });
-    if (byBatch.length > 0) {
-      const batches = await prisma.batch.findMany({
-        where: { id: { in: byBatch.map((b) => b.batchId) } },
-        select: { id: true, code: true },
-      });
-      const codeById = new Map(batches.map((b) => [b.id, b.code]));
-      batchLeaderboard = byBatch
-        .map((b) => ({
-          code: codeById.get(b.batchId) ?? b.batchId,
-          count: b._count._all,
-        }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 10);
+    const ticketCountByBatch = new Map<string, { code: string; count: number }>();
+    for (const row of attendeesByBatch) {
+      const batchId = row.participant.batchId;
+      const code = row.participant.batch?.code ?? batchId;
+      const prev = ticketCountByBatch.get(batchId);
+      if (prev) prev.count += 1;
+      else ticketCountByBatch.set(batchId, { code, count: 1 });
     }
+    batchLeaderboard = Array.from(ticketCountByBatch.entries())
+      .map(([batchId, v]) => ({ batchId, code: v.code, count: v.count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
   }
 
   const scopeLabel =
@@ -322,21 +322,21 @@ export default async function DashboardPage() {
 
       {session.role === "SUPER_ADMIN" && batchLeaderboard.length > 0 ? (
         <section className="mt-8 rounded-2xl border border-black/10 bg-white p-5 dark:border-white/10 dark:bg-zinc-950">
-          <h2 className="text-base font-semibold">Registrations by batch (top 10)</h2>
+          <h2 className="text-base font-semibold">Tickets sold (attendees) by batch (top 10)</h2>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Where most participant records are recorded — open Sales report to filter a single batch.
+            Batches with the most attendee rows (each row is one ticket sold). Use Sales report to filter one batch.
           </p>
           <div className="mt-4 overflow-x-auto">
             <table className="w-full min-w-[280px] text-left text-sm">
               <thead className="text-zinc-600 dark:text-zinc-400">
                 <tr>
                   <th className="py-2 pr-4">Batch</th>
-                  <th className="py-2 text-right">Registrations</th>
+                  <th className="py-2 text-right">Tickets sold</th>
                 </tr>
               </thead>
               <tbody>
                 {batchLeaderboard.map((row) => (
-                  <tr key={row.code} className="border-t border-black/5 dark:border-white/10">
+                  <tr key={row.batchId} className="border-t border-black/5 dark:border-white/10">
                     <td className="py-2 pr-4 font-medium">{row.code}</td>
                     <td className="py-2 text-right tabular-nums">{row.count.toLocaleString()}</td>
                   </tr>
