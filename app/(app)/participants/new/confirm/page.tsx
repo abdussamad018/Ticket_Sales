@@ -80,7 +80,7 @@ export default async function ConfirmRegistrationPage({
       <section className="relative overflow-hidden rounded-2xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50 via-emerald-50 to-white p-5 text-emerald-950 shadow-sm dark:border-emerald-900/40 dark:from-emerald-950/30 dark:via-emerald-950/20 dark:to-zinc-950 dark:text-emerald-50 sm:p-6">
         <div className="pointer-events-none absolute -right-14 -top-14 h-40 w-40 rounded-full bg-emerald-200/40 blur-2xl dark:bg-emerald-500/10" />
         <div className="pointer-events-none absolute -bottom-20 -left-20 h-56 w-56 rounded-full bg-emerald-300/25 blur-3xl dark:bg-emerald-500/10" />
-        <div className="flex items-start gap-4">
+        <div className="flex flex-col items-center gap-4 text-center">
           <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-emerald-600 text-white shadow-sm ring-1 ring-white/40 dark:bg-emerald-500 dark:ring-white/10">
             <svg
               aria-hidden="true"
@@ -101,7 +101,7 @@ export default async function ConfirmRegistrationPage({
             <div className="mt-0.5 text-sm text-emerald-900/80 dark:text-emerald-100/80">
               আপনার রেজিস্ট্রেশন সম্পূর্ণ হয়েছে।
             </div>
-            <div className="mt-3 inline-flex flex-wrap items-center gap-2 text-sm text-emerald-900/80 dark:text-emerald-100/80">
+            <div className="mt-3 inline-flex flex-wrap items-center justify-center gap-2 text-sm text-emerald-900/80 dark:text-emerald-100/80">
               <span className="inline-flex items-center gap-2 rounded-xl border border-emerald-200/70 bg-white/60 px-3 py-1.5 dark:border-emerald-900/40 dark:bg-white/5">
                 <svg
                   aria-hidden="true"
