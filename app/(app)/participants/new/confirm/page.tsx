@@ -139,31 +139,6 @@ export default async function ConfirmRegistrationPage({
         </section>
 
         <section className="rounded-2xl border border-black/10 bg-white p-5 dark:border-white/10 dark:bg-zinc-950">
-          <div className="text-base font-semibold">টিকিট সারাংশ</div>
-          <div className="mt-3 grid gap-2">
-            {ticketLines.map((t) => (
-              <div
-                key={t.name}
-                className="flex items-center justify-between gap-3 rounded-xl border border-black/5 px-4 py-3 text-sm dark:border-white/10"
-              >
-                <div className="font-medium">{t.name}</div>
-                <div className="text-zinc-600 dark:text-zinc-400">
-                  {bnNum(t.price)} × {bnNum(t.count)} ={" "}
-                  <span className="font-semibold text-zinc-800 dark:text-zinc-200">
-                    {bnNum(t.lineTotal)}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-3 flex justify-end text-sm">
-            <div className="rounded-xl bg-black/5 px-4 py-2 font-semibold dark:bg-white/10">
-              মোট: {bnNum(totalAmount)} টাকা
-            </div>
-          </div>
-        </section>
-
-        <section className="rounded-2xl border border-black/10 bg-white p-5 dark:border-white/10 dark:bg-zinc-950">
           <div className="text-base font-semibold">আপনার এন্ট্রি করা তথ্য</div>
           <div className="mt-3 grid gap-3">
             {participant.attendees.map((a, idx) => (
@@ -220,6 +195,33 @@ export default async function ConfirmRegistrationPage({
             </a>
           </div>
         </section>
+
+        <section className="rounded-2xl border border-black/10 bg-white p-5 dark:border-white/10 dark:bg-zinc-950">
+          <div className="text-base font-semibold">টিকিট সারাংশ</div>
+          <div className="mt-3 grid gap-2">
+            {ticketLines.map((t) => (
+              <div
+                key={t.name}
+                className="flex items-center justify-between gap-3 rounded-xl border border-black/5 px-4 py-3 text-sm dark:border-white/10"
+              >
+                <div className="font-medium">{t.name}</div>
+                <div className="text-zinc-600 dark:text-zinc-400">
+                  {bnNum(t.price)} × {bnNum(t.count)} ={" "}
+                  <span className="font-semibold text-zinc-800 dark:text-zinc-200">
+                    {bnNum(t.lineTotal)}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 flex justify-end text-sm">
+            <div className="rounded-xl bg-black/5 px-4 py-2 font-semibold dark:bg-white/10">
+              মোট: {bnNum(totalAmount)} টাকা
+            </div>
+          </div>
+        </section>
+
+       
       </div>
     </div>
   );
