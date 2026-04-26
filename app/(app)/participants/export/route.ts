@@ -1,3 +1,5 @@
+import type { Prisma } from "@prisma/client";
+
 import { requireSession } from "@/app/lib/auth";
 import { prisma } from "@/app/lib/prisma";
 
@@ -21,6 +23,7 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url);
   const batchId = url.searchParams.get("batchId") || undefined;
+  const phoneSearch = url.searchParams.get("phone")?.trim() ?? "";
 
   const isAdmin = session.role === "SUPER_ADMIN";
 
@@ -28,12 +31,24 @@ export async function GET(req: Request) {
     return new Response("Forbidden", { status: 403 });
   }
 
-  const where =
+  const baseWhere: Prisma.ParticipantWhereInput =
     session.role === "SUPER_ADMIN"
       ? batchId
         ? { batchId }
         : {}
       : { batchId: session.batchId! };
+
+  const where: Prisma.ParticipantWhereInput =
+    phoneSearch.length > 0
+      ? {
+          ...baseWhere,
+          attendees: {
+            some: {
+              phone: { contains: phoneSearch, mode: "insensitive" },
+            },
+          },
+        }
+      : baseWhere;
 
   if (isAdmin && batchId) {
     const exists = await prisma.batch.findUnique({ where: { id: batchId }, select: { id: true } });
