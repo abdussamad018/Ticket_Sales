@@ -11,6 +11,7 @@ function bnDate(d: Date): string {
   return new Intl.DateTimeFormat("bn-BD", {
     dateStyle: "medium",
     timeStyle: "short",
+    timeZone: "Asia/Dhaka",
   }).format(d);
 }
 
@@ -73,11 +74,51 @@ export default async function ConfirmRegistrationPage({
   })();
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-0 py-0">
-      <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-900 dark:border-emerald-900/40 dark:bg-emerald-950/25 dark:text-emerald-100">
-        <div className="text-lg font-semibold">আপনার রেজিস্ট্রেশন সম্পূর্ণ হয়েছে।</div>
-        <div className="mt-1 text-sm text-emerald-800 dark:text-emerald-200">
-          তারিখ ও সময়: {bnDate(participant.createdAt)}
+    <div className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
+      <section className="relative overflow-hidden rounded-2xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50 via-emerald-50 to-white p-5 text-emerald-950 shadow-sm dark:border-emerald-900/40 dark:from-emerald-950/30 dark:via-emerald-950/20 dark:to-zinc-950 dark:text-emerald-50">
+        <div className="pointer-events-none absolute -right-14 -top-14 h-40 w-40 rounded-full bg-emerald-200/40 blur-2xl dark:bg-emerald-500/10" />
+        <div className="flex items-start gap-4">
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-emerald-600 text-white shadow-sm dark:bg-emerald-500">
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              className="h-6 w-6"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M20 6 9 17l-5-5" />
+            </svg>
+          </div>
+
+          <div className="min-w-0">
+            <div className="text-xl font-semibold tracking-tight">আপনাকে অভিনন্দন</div>
+            <div className="mt-0.5 text-sm text-emerald-900/80 dark:text-emerald-100/80">
+              আপনার রেজিস্ট্রেশন সম্পূর্ণ হয়েছে।
+            </div>
+            <div className="mt-2 inline-flex flex-wrap items-center gap-2 text-sm text-emerald-900/80 dark:text-emerald-100/80">
+              <span className="inline-flex items-center gap-2 rounded-xl border border-emerald-200/70 bg-white/60 px-3 py-1.5 dark:border-emerald-900/40 dark:bg-white/5">
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M8 7V3m8 4V3M4 11h16" />
+                  <path d="M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2Z" />
+                </svg>
+                <span className="font-medium">তারিখ ও সময়</span>
+                <span className="text-emerald-950 dark:text-emerald-50">{bnDate(participant.createdAt)}</span>
+              </span>
+              <span className="text-xs text-emerald-900/70 dark:text-emerald-100/70">(Asia/Dhaka)</span>
+            </div>
+          </div>
         </div>
       </section>
 
