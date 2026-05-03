@@ -42,5 +42,34 @@ export async function recordBatchCashSettlementAction(formData: FormData) {
     },
   });
 
-  redirect("/admin/cash-settlements");
+  redirect("/admin/cash-settlements?saved=1");
+}
+
+const deleteSchema = z.object({
+  settlementId: z.string().min(1),
+});
+
+export async function deleteBatchCashSettlementAction(formData: FormData) {
+  await requireSuperAdmin();
+
+  const parsed = deleteSchema.safeParse({
+    settlementId: formData.get("settlementId"),
+  });
+  if (!parsed.success) {
+    redirect("/admin/cash-settlements?error=" + encodeURIComponent("Invalid settlement."));
+  }
+
+  const existing = await prisma.batchCashSettlement.findUnique({
+    where: { id: parsed.data.settlementId },
+    select: { id: true },
+  });
+  if (!existing) {
+    redirect("/admin/cash-settlements?error=" + encodeURIComponent("Settlement not found."));
+  }
+
+  await prisma.batchCashSettlement.delete({
+    where: { id: parsed.data.settlementId },
+  });
+
+  redirect("/admin/cash-settlements?deleted=1");
 }

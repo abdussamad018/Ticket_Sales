@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { BatchSearchCombobox } from "@/app/admin/cash-settlements/BatchSearchCombobox";
+import { DeleteSettlementForm } from "@/app/admin/cash-settlements/DeleteSettlementForm";
 import { recordBatchCashSettlementAction } from "@/app/admin/cash-settlements/actions";
 import { requireSuperAdmin } from "@/app/lib/auth";
 import { prisma } from "@/app/lib/prisma";
@@ -13,10 +14,12 @@ function sumTicketAmount(attendees: Array<{ ticket: { price: number } | null }>)
 export default async function AdminCashSettlementsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; saved?: string; deleted?: string }>;
 }) {
   const session = await requireSuperAdmin();
-  const { error } = await searchParams;
+  const { error, saved, deleted } = await searchParams;
+  const showSaved = saved === "1";
+  const showDeleted = deleted === "1";
 
   const [batches, settlements] = await Promise.all([
     prisma.batch.findMany({ orderBy: { code: "asc" }, select: { id: true, code: true, name: true } }),
@@ -79,6 +82,36 @@ export default async function AdminCashSettlementsPage({
           Back to admin
         </Link>
       </div>
+
+      {showSaved ? (
+        <div
+          role="status"
+          className="mt-4 flex flex-col gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-900/50 dark:bg-emerald-950/35 dark:text-emerald-100 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <span className="font-medium">Settlement saved successfully.</span>
+          <Link
+            href="/admin/cash-settlements"
+            className="shrink-0 text-xs font-medium text-emerald-800 underline underline-offset-2 hover:text-emerald-950 dark:text-emerald-200 dark:hover:text-white"
+          >
+            Dismiss
+          </Link>
+        </div>
+      ) : null}
+
+      {showDeleted ? (
+        <div
+          role="status"
+          className="mt-4 flex flex-col gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-900/50 dark:bg-emerald-950/35 dark:text-emerald-100 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <span className="font-medium">Settlement deleted.</span>
+          <Link
+            href="/admin/cash-settlements"
+            className="shrink-0 text-xs font-medium text-emerald-800 underline underline-offset-2 hover:text-emerald-950 dark:text-emerald-200 dark:hover:text-white"
+          >
+            Dismiss
+          </Link>
+        </div>
+      ) : null}
 
       {error ? (
         <div
@@ -177,7 +210,7 @@ export default async function AdminCashSettlementsPage({
         <h2 className="text-base font-semibold">Recent settlements</h2>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Last 100 entries (newest first).</p>
         <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[720px] border-collapse text-sm">
+          <table className="w-full min-w-[800px] border-collapse text-sm">
             <thead>
               <tr className="border-b border-black/10 text-left dark:border-white/10">
                 <th className="py-2 pr-4 font-medium">When</th>
@@ -185,6 +218,7 @@ export default async function AdminCashSettlementsPage({
                 <th className="py-2 pr-4 font-medium tabular-nums">Amount</th>
                 <th className="py-2 pr-4 font-medium">Recorded by</th>
                 <th className="py-2 pr-4 font-medium">Note</th>
+                <th className="py-2 pr-2 font-medium text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -202,6 +236,13 @@ export default async function AdminCashSettlementsPage({
                     ) : null}
                   </td>
                   <td className="py-2 pr-4 text-zinc-600 dark:text-zinc-400">{s.note ?? "—"}</td>
+                  <td className="py-2 pl-2 text-right align-middle">
+                    <DeleteSettlementForm
+                      settlementId={s.id}
+                      batchCode={s.batch.code}
+                      amountBdt={s.amountBdt}
+                    />
+                  </td>
                 </tr>
               ))}
             </tbody>
