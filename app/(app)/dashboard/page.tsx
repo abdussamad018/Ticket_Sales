@@ -101,6 +101,16 @@ export default async function DashboardPage() {
     }
   }
 
+  let cashPaidToAdmin = 0;
+  if (session.role === "BATCH_REP" && session.batchId) {
+    const cashAgg = await prisma.batchCashSettlement.aggregate({
+      where: { batchId: session.batchId },
+      _sum: { amountBdt: true },
+    });
+    cashPaidToAdmin = cashAgg._sum.amountBdt ?? 0;
+  }
+  const cashDueToAdmin = Math.max(0, totalSales - cashPaidToAdmin);
+
   let batchLeaderboard: { batchId: string; code: string; count: number }[] = [];
   if (session.role === "SUPER_ADMIN") {
     const attendeesByBatch = await prisma.attendee.findMany({
@@ -204,6 +214,42 @@ export default async function DashboardPage() {
         </div>
       </section>
 
+      {session.role === "BATCH_REP" && session.batchId ? (
+        <section className="mt-8 rounded-2xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50/80 via-white to-white p-5 dark:border-emerald-900/40 dark:from-emerald-950/25 dark:via-zinc-950 dark:to-zinc-950">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-base font-semibold">Cash vs ticket sales</h2>
+              <p className="mt-1 text-sm text-emerald-900/80 dark:text-emerald-100/80">
+                Super admin records each cash handover. Due = sales minus total recorded cash for your batch.
+              </p>
+            </div>
+            <LoadingLinkButton
+              href="/reports/cash"
+              pendingText="Loading…"
+              className="inline-flex h-10 w-fit items-center rounded-xl bg-emerald-700 px-4 text-sm font-medium text-white hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+            >
+              Full cash report
+            </LoadingLinkButton>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-emerald-200/60 bg-white/80 p-4 dark:border-emerald-900/30 dark:bg-zinc-950">
+              <div className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Sales (BDT)</div>
+              <div className="mt-1 text-xl font-semibold tabular-nums">{totalSales.toLocaleString()}</div>
+            </div>
+            <div className="rounded-2xl border border-emerald-200/60 bg-white/80 p-4 dark:border-emerald-900/30 dark:bg-zinc-950">
+              <div className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Paid to admin (BDT)</div>
+              <div className="mt-1 text-xl font-semibold tabular-nums">{cashPaidToAdmin.toLocaleString()}</div>
+            </div>
+            <div className="rounded-2xl border border-amber-200/80 bg-amber-50/90 p-4 dark:border-amber-900/40 dark:bg-amber-950/30">
+              <div className="text-xs font-medium text-amber-900/80 dark:text-amber-100/80">Due (BDT)</div>
+              <div className="mt-1 text-xl font-semibold tabular-nums text-amber-950 dark:text-amber-50">
+                {cashDueToAdmin.toLocaleString()}
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       <section className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-2xl border border-black/10 bg-white p-5 dark:border-white/10 dark:bg-zinc-950">
           <div className="text-xs text-zinc-600 dark:text-zinc-400">Today (tickets)</div>
@@ -302,6 +348,11 @@ export default async function DashboardPage() {
             <li>
               <LoadingLinkButton className="underline underline-offset-4" href="/reports/sales" pendingText="Loading…">
                 Sales report (by rep & history)
+              </LoadingLinkButton>
+            </li>
+            <li>
+              <LoadingLinkButton className="underline underline-offset-4" href="/reports/cash" pendingText="Loading…">
+                Cash &amp; due (ticket remittance)
               </LoadingLinkButton>
             </li>
             <li>

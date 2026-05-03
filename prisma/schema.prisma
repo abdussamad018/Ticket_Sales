@@ -37,6 +37,8 @@ model Batch {
 
   reps         User[]        @relation("BatchReps")
   participants Participant[]
+  /// Cash handed to super admin against ticket sales for this batch (BDT, same unit as Ticket.price).
+  cashSettlements BatchCashSettlement[]
 }
 
 model User {
@@ -53,9 +55,26 @@ model User {
   batch   Batch?  @relation("BatchReps", fields: [batchId], references: [id], onDelete: SetNull)
 
   createdParticipants Participant[] @relation("CreatedBy")
+  cashSettlementsRecorded BatchCashSettlement[] @relation("CashSettlementsRecorded")
 
   @@index([role])
   @@index([batchId])
+}
+
+/// Super admin records cash received from a batch (ticket sales remittance).
+model BatchCashSettlement {
+  id           String   @id @default(cuid())
+  batchId      String
+  batch        Batch    @relation(fields: [batchId], references: [id], onDelete: Restrict)
+  amountBdt    Int
+  note         String?
+  recordedById String
+  recordedBy   User     @relation("CashSettlementsRecorded", fields: [recordedById], references: [id], onDelete: Restrict)
+  createdAt    DateTime @default(now())
+
+  @@index([batchId])
+  @@index([recordedById])
+  @@index([createdAt])
 }
 
 model Ticket {

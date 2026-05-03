@@ -76,7 +76,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               <NavLink href="/participants" label="Participants" />
               <NavLink href="/participants/new" label="Add participant" />
               <NavLink href="/reports" label="Reports" />
-              {session.role === "SUPER_ADMIN" ? <NavLink href="/admin" label="Admin" /> : null}
+              {session.role === "SUPER_ADMIN" ? (
+                <>
+                  <NavLink href="/admin" label="Admin" />
+                  <NavLink href="/admin/cash-settlements" label="Cash settlements" />
+                </>
+              ) : null}
             </nav>
           </div>
         </aside>
@@ -112,13 +117,22 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               Reports
             </LoadingLinkButton>
             {session.role === "SUPER_ADMIN" ? (
-              <LoadingLinkButton
-                href="/admin"
-                pendingText="Loading…"
-                className="inline-flex h-10 items-center rounded-xl bg-black px-4 text-sm text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
-              >
-                Admin
-              </LoadingLinkButton>
+              <>
+                <LoadingLinkButton
+                  href="/admin"
+                  pendingText="Loading…"
+                  className="inline-flex h-10 items-center rounded-xl bg-black px-4 text-sm text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+                >
+                  Admin
+                </LoadingLinkButton>
+                <LoadingLinkButton
+                  href="/admin/cash-settlements"
+                  pendingText="Loading…"
+                  className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
+                >
+                  Cash settlements
+                </LoadingLinkButton>
+              </>
             ) : null}
           </div>
 
