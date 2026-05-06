@@ -17,6 +17,28 @@ function sumTicketAmount(attendees: Array<{ ticket: { price: number } }>) {
   return attendees.reduce((s, a) => s + a.ticket.price, 0);
 }
 
+/** Ticket `code` in DB for alumni-priced tickets (batch leaderboard, right column). */
+const ALUMNI_TICKET_CODE = "ALUMNI";
+
+type AttendeeBatchRow = {
+  participant: { batchId: string; batch: { code: string } | null };
+};
+
+function top10TicketsSoldByBatch(rows: AttendeeBatchRow[]) {
+  const ticketCountByBatch = new Map<string, { code: string; count: number }>();
+  for (const row of rows) {
+    const batchId = row.participant.batchId;
+    const code = row.participant.batch?.code ?? batchId;
+    const prev = ticketCountByBatch.get(batchId);
+    if (prev) prev.count += 1;
+    else ticketCountByBatch.set(batchId, { code, count: 1 });
+  }
+  return Array.from(ticketCountByBatch.entries())
+    .map(([batchId, v]) => ({ batchId, code: v.code, count: v.count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+}
+
 export default async function DashboardPage() {
   const session = await requireSession();
   const scope = participantScopeWhere(session);
@@ -112,25 +134,24 @@ export default async function DashboardPage() {
   const cashDueToAdmin = Math.max(0, totalSales - cashPaidToAdmin);
 
   let batchLeaderboard: { batchId: string; code: string; count: number }[] = [];
+  let batchLeaderboardAlumni: { batchId: string; code: string; count: number }[] = [];
   if (session.role === "SUPER_ADMIN") {
-    const attendeesByBatch = await prisma.attendee.findMany({
-      where: { participant: participantScopeWhere(session) },
-      select: {
-        participant: { select: { batchId: true, batch: { select: { code: true } } } },
-      },
-    });
-    const ticketCountByBatch = new Map<string, { code: string; count: number }>();
-    for (const row of attendeesByBatch) {
-      const batchId = row.participant.batchId;
-      const code = row.participant.batch?.code ?? batchId;
-      const prev = ticketCountByBatch.get(batchId);
-      if (prev) prev.count += 1;
-      else ticketCountByBatch.set(batchId, { code, count: 1 });
-    }
-    batchLeaderboard = Array.from(ticketCountByBatch.entries())
-      .map(([batchId, v]) => ({ batchId, code: v.code, count: v.count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10);
+    const attendeeBatchSelect = {
+      participant: { select: { batchId: true, batch: { select: { code: true } } } },
+    } as const;
+    const scopeWhere = participantScopeWhere(session);
+    const [attendeesAllTickets, attendeesAlumniOnly] = await Promise.all([
+      prisma.attendee.findMany({
+        where: { participant: scopeWhere },
+        select: attendeeBatchSelect,
+      }),
+      prisma.attendee.findMany({
+        where: { participant: scopeWhere, ticket: { code: ALUMNI_TICKET_CODE } },
+        select: attendeeBatchSelect,
+      }),
+    ]);
+    batchLeaderboard = top10TicketsSoldByBatch(attendeesAllTickets);
+    batchLeaderboardAlumni = top10TicketsSoldByBatch(attendeesAlumniOnly);
   }
 
   const scopeLabel =
@@ -371,31 +392,70 @@ export default async function DashboardPage() {
         </section>
       </div>
 
-      {session.role === "SUPER_ADMIN" && batchLeaderboard.length > 0 ? (
-        <section className="mt-8 rounded-2xl border border-black/10 bg-white p-5 dark:border-white/10 dark:bg-zinc-950">
-          <h2 className="text-base font-semibold">Tickets sold (attendees) by batch (top 10)</h2>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Batches with the most attendee rows (each row is one ticket sold). Use Sales report to filter one batch.
-          </p>
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[280px] text-left text-sm">
-              <thead className="text-zinc-600 dark:text-zinc-400">
-                <tr>
-                  <th className="py-2 pr-4">Batch</th>
-                  <th className="py-2 text-right">Tickets sold</th>
-                </tr>
-              </thead>
-              <tbody>
-                {batchLeaderboard.map((row) => (
-                  <tr key={row.batchId} className="border-t border-black/5 dark:border-white/10">
-                    <td className="py-2 pr-4 font-medium">{row.code}</td>
-                    <td className="py-2 text-right tabular-nums">{row.count.toLocaleString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+      {session.role === "SUPER_ADMIN" ? (
+        <div className="mt-8 grid gap-6 lg:grid-cols-2">
+          <section className="rounded-2xl border border-black/10 bg-white p-5 dark:border-white/10 dark:bg-zinc-950">
+            <h2 className="text-base font-semibold">Tickets sold (attendees) by batch (top 10)</h2>
+            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+              Batches with the most attendee rows (each row is one ticket sold). Use Sales report to filter one batch.
+            </p>
+            {batchLeaderboard.length === 0 ? (
+              <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">No attendee rows in scope yet.</p>
+            ) : (
+              <div className="mt-4 overflow-x-auto">
+                <table className="w-full min-w-[280px] text-left text-sm">
+                  <thead className="text-zinc-600 dark:text-zinc-400">
+                    <tr>
+                      <th className="py-2 pr-4">Batch</th>
+                      <th className="py-2 text-right">Tickets sold</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {batchLeaderboard.map((row) => (
+                      <tr key={row.batchId} className="border-t border-black/5 dark:border-white/10">
+                        <td className="py-2 pr-4 font-medium">{row.code}</td>
+                        <td className="py-2 text-right tabular-nums">{row.count.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+
+          <section className="rounded-2xl border border-black/10 bg-white p-5 dark:border-white/10 dark:bg-zinc-950">
+            <h2 className="text-base font-semibold">Top 10 batch by ALUMNI</h2>
+            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+              Attendee rows where ticket code is{" "}
+              <span className="font-mono text-zinc-800 dark:text-zinc-200">{ALUMNI_TICKET_CODE}</span> only — same
+              ranking as the left table, but alumni ticket counts per batch.
+            </p>
+            {batchLeaderboardAlumni.length === 0 ? (
+              <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
+                No rows with ticket code {ALUMNI_TICKET_CODE} in scope yet.
+              </p>
+            ) : (
+              <div className="mt-4 overflow-x-auto">
+                <table className="w-full min-w-[280px] text-left text-sm">
+                  <thead className="text-zinc-600 dark:text-zinc-400">
+                    <tr>
+                      <th className="py-2 pr-4">Batch</th>
+                      <th className="py-2 text-right">ALUMNI tickets</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {batchLeaderboardAlumni.map((row) => (
+                      <tr key={row.batchId} className="border-t border-black/5 dark:border-white/10">
+                        <td className="py-2 pr-4 font-medium">{row.code}</td>
+                        <td className="py-2 text-right tabular-nums">{row.count.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        </div>
       ) : null}
 
       {session.role === "BATCH_REP" && !session.batchId ? (
