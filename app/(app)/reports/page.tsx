@@ -90,6 +90,24 @@ export default async function ReportsPage() {
             </LoadingLinkButton>
           </div>
         </div>
+
+        {session.role === "SUPER_ADMIN" ? (
+          <div className="rounded-2xl border border-black/10 bg-white p-5 dark:border-white/10 dark:bg-zinc-950">
+            <div className="text-sm font-semibold">Final report</div>
+            <div className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+              100% table format: ticket breakdown, attendee total, T-shirt sizes, sales, paid, due — with print.
+            </div>
+            <div className="mt-4">
+              <LoadingLinkButton
+                href="/reports/final"
+                pendingText="Opening…"
+                className="inline-flex h-10 items-center rounded-xl bg-black px-4 text-sm text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+              >
+                Open
+              </LoadingLinkButton>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

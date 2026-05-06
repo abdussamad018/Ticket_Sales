@@ -32,6 +32,16 @@ export async function proxy(req: NextRequest) {
   if (pathname.startsWith("/_next") || pathname.startsWith("/favicon")) {
     return NextResponse.next();
   }
+  // Allow public assets (from /public) without auth.
+  // Otherwise, requests like /kmlhsaa_logo.jpg get redirected to /login and Next/Image receives null.
+  if (
+    pathname === "/robots.txt" ||
+    pathname === "/sitemap.xml" ||
+    pathname === "/manifest.json" ||
+    /\.[a-zA-Z0-9]+$/.test(pathname)
+  ) {
+    return NextResponse.next();
+  }
 
   const session = await readSession(req);
   if (!session) {
