@@ -39,6 +39,7 @@ model Batch {
   participants Participant[]
   /// Cash handed to super admin against ticket sales for this batch (BDT, same unit as Ticket.price).
   cashSettlements BatchCashSettlement[]
+  sportRosterEntries SportRosterEntry[]
 }
 
 model User {
@@ -56,6 +57,7 @@ model User {
 
   createdParticipants Participant[] @relation("CreatedBy")
   cashSettlementsRecorded BatchCashSettlement[] @relation("CashSettlementsRecorded")
+  sportRosterEntriesCreated SportRosterEntry[] @relation("SportRosterCreatedBy")
 
   @@index([role])
   @@index([batchId])
@@ -151,4 +153,44 @@ model SystemSetting {
   id               String   @id
   registrationOpen Boolean  @default(true)
   updatedAt        DateTime @updatedAt
+}
+
+/// Configurable game/sport for per-batch roster (separate from ticket `Participant`).
+model Sport {
+  id                   String   @id @default(cuid())
+  name                 String
+  code                 String   @unique
+  maxPlayersPerBatch   Int
+  dataEntryOpen        Boolean  @default(true)
+  sortOrder            Int      @default(0)
+  /// Guidance for batch reps (e.g. age bands, school labels); multiline ok.
+  note                 String?  @db.Text
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  rosterEntries SportRosterEntry[]
+
+  @@index([sortOrder])
+}
+
+/// One roster row = one player for a sport within a batch.
+model SportRosterEntry {
+  id          String   @id @default(cuid())
+  sportId     String
+  sport       Sport    @relation(fields: [sportId], references: [id], onDelete: Cascade)
+  batchId     String
+  batch       Batch    @relation(fields: [batchId], references: [id], onDelete: Restrict)
+  createdById String
+  createdBy   User     @relation("SportRosterCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  fullName String
+  phone    String?
+  notes    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sportId, batchId])
+  @@index([batchId])
+  @@index([createdById])
 }
