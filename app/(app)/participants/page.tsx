@@ -33,6 +33,10 @@ export default async function ParticipantsListPage({
   const { error, batchId: batchIdFilter, phone: phoneParam } = await searchParams;
   const phoneSearch = phoneParam?.trim() ?? "";
 
+  const systemSetting = await prisma.systemSetting.findUnique({ where: { id: "singleton" } });
+  const registrationOpen = systemSetting?.registrationOpen ?? true;
+  const batchRepDeleteDisabled = session.role === "BATCH_REP" && !registrationOpen;
+
   const isAdmin = session.role === "SUPER_ADMIN";
 
   const batchesForFilter = isAdmin
@@ -124,6 +128,13 @@ export default async function ParticipantsListPage({
           Export CSV
         </a>
       </div>
+
+      {batchRepDeleteDisabled ? (
+        <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100">
+          Registration is closed. You can view entries but cannot delete them. Contact a super admin if a correction
+          is needed.
+        </p>
+      ) : null}
 
       {error ? (
         <div
@@ -304,7 +315,11 @@ export default async function ParticipantsListPage({
                           >
                             View
                           </Link>
-                          <DeleteParticipantButton participantId={p.id} label={label} />
+                          <DeleteParticipantButton
+                            participantId={p.id}
+                            label={label}
+                            disabled={batchRepDeleteDisabled}
+                          />
                         </div>
                       </td>
                     </tr>

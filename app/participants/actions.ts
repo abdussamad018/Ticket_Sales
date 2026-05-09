@@ -26,6 +26,14 @@ export async function deleteParticipantAction(formData: FormData) {
     if (!session.batchId || participant.batchId !== session.batchId) {
       redirect("/participants?error=" + encodeURIComponent("You cannot delete this participant."));
     }
+    const setting = await prisma.systemSetting.findUnique({ where: { id: "singleton" } });
+    const registrationOpen = setting?.registrationOpen ?? true;
+    if (!registrationOpen) {
+      redirect(
+        "/participants?error=" +
+          encodeURIComponent("Registration is closed. Batch representatives cannot delete participant entries."),
+      );
+    }
   }
 
   await prisma.participant.delete({ where: { id: idParsed.data } });

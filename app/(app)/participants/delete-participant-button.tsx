@@ -6,9 +6,24 @@ import { SubmitButton } from "@/app/ui/SubmitButton";
 type Props = {
   participantId: string;
   label: string;
+  /** When true, delete is not offered (e.g. batch rep after registration closed). */
+  disabled?: boolean;
 };
 
-export function DeleteParticipantButton({ participantId, label }: Props) {
+export function DeleteParticipantButton({ participantId, label, disabled }: Props) {
+  if (disabled) {
+    return (
+      <button
+        type="button"
+        disabled
+        title="Registration is closed. Batch representatives cannot delete entries."
+        className="h-9 cursor-not-allowed rounded-lg border border-zinc-200 px-3 text-sm text-zinc-400 opacity-60 dark:border-zinc-700 dark:text-zinc-500"
+      >
+        Delete
+      </button>
+    );
+  }
+
   return (
     <form
       action={deleteParticipantAction}
