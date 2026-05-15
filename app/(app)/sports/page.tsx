@@ -19,7 +19,13 @@ export default async function SportsListPage() {
           <Link href="/participants" className="underline underline-offset-2 hover:text-zinc-900 dark:hover:text-zinc-100">
             event registration (participants)
           </Link>
-          .
+          .{" "}
+          <Link
+            href="/reports/sport-rosters/print"
+            className="underline underline-offset-2 hover:text-zinc-900 dark:hover:text-zinc-100"
+          >
+            Printable report (all sports, by batch)
+          </Link>
         </p>
       </div>
 

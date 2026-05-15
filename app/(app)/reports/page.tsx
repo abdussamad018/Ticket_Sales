@@ -44,6 +44,22 @@ export default async function ReportsPage() {
         </div>
 
         <div className="rounded-2xl border border-black/10 bg-white p-5 dark:border-white/10 dark:bg-zinc-950">
+          <div className="text-sm font-semibold">Sport roster</div>
+          <div className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            By batch and sport: full player list with phone and notes — printable.
+          </div>
+          <div className="mt-4">
+            <LoadingLinkButton
+              href="/reports/sport-rosters/print"
+              pendingText="Opening…"
+              className="inline-flex h-10 items-center rounded-xl bg-black px-4 text-sm text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+            >
+              Open / print
+            </LoadingLinkButton>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-black/10 bg-white p-5 dark:border-white/10 dark:bg-zinc-950">
           <div className="text-sm font-semibold">Sales</div>
           <div className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
             Batch-wise sales history, totals, and representative totals.
