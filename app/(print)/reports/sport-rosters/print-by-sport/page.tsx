@@ -1,8 +1,10 @@
+import type { Prisma } from "@prisma/client";
+import Link from "next/link";
+
 import { requireSession } from "@/app/lib/auth";
 import { prisma } from "@/app/lib/prisma";
 import { PrintButton } from "@/app/(print)/reports/print/PrintButton";
 import { BatchCombobox } from "@/app/ui/BatchCombobox";
-import Link from "next/link";
 
 type RosterEntry = {
   id: string;
@@ -12,23 +14,23 @@ type RosterEntry = {
   createdAt: Date;
 };
 
-type SportGroup = {
-  sport: { id: string; name: string; code: string; sortOrder: number; maxPlayersPerBatch: number };
+type BatchBlock = {
+  batch: { id: string; code: string; name: string | null };
   players: RosterEntry[];
 };
 
-type BatchGroup = {
-  batch: { id: string; code: string; name: string | null };
-  sports: SportGroup[];
+type SportSection = {
+  sport: { id: string; name: string; code: string; sortOrder: number; maxPlayersPerBatch: number };
+  batches: BatchBlock[];
 };
 
-export default async function SportRostersPrintPage({
+export default async function SportRostersBySportPrintPage({
   searchParams,
 }: {
-  searchParams: Promise<{ batchId?: string }>;
+  searchParams: Promise<{ batchId?: string; sportId?: string }>;
 }) {
   const session = await requireSession();
-  const { batchId } = await searchParams;
+  const { batchId, sportId } = await searchParams;
 
   const batchScopeWhere =
     session.role === "SUPER_ADMIN"
@@ -43,17 +45,30 @@ export default async function SportRostersPrintPage({
     select: { id: true, code: true, name: true },
   });
 
+  const sportsAll = await prisma.sport.findMany({
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: { id: true, name: true, code: true },
+  });
+
   const isAdmin = session.role === "SUPER_ADMIN";
   const batchFilterActive = isAdmin && !!batchId && batchesAll.some((b) => b.id === batchId);
+  const sportFilterActive =
+    !!sportId && sportsAll.some((s) => s.id === sportId);
 
-  const rosterWhere =
-    session.role === "SUPER_ADMIN"
-      ? batchFilterActive
-        ? { batchId }
-        : {}
-      : session.role === "BATCH_REP" && session.batchId
-        ? { batchId: session.batchId }
-        : { id: { in: [] as string[] } };
+  let rosterWhere: Prisma.SportRosterEntryWhereInput;
+  if (session.role === "SUPER_ADMIN") {
+    rosterWhere = {
+      ...(batchFilterActive ? { batchId: batchId! } : {}),
+      ...(sportFilterActive ? { sportId: sportId! } : {}),
+    };
+  } else if (session.role === "BATCH_REP" && session.batchId) {
+    rosterWhere = {
+      batchId: session.batchId,
+      ...(sportFilterActive ? { sportId: sportId! } : {}),
+    };
+  } else {
+    rosterWhere = { id: { in: [] } };
+  }
 
   const entries = await prisma.sportRosterEntry.findMany({
     where: rosterWhere,
@@ -77,20 +92,20 @@ export default async function SportRostersPrintPage({
     },
   });
 
-  const byBatchId = new Map<string, Map<string, SportGroup>>();
+  const bySportId = new Map<string, Map<string, BatchBlock>>();
 
   for (const e of entries) {
-    let sportMap = byBatchId.get(e.batchId);
-    if (!sportMap) {
-      sportMap = new Map();
-      byBatchId.set(e.batchId, sportMap);
+    let batchMap = bySportId.get(e.sport.id);
+    if (!batchMap) {
+      batchMap = new Map();
+      bySportId.set(e.sport.id, batchMap);
     }
-    let sg = sportMap.get(e.sport.id);
-    if (!sg) {
-      sg = { sport: e.sport, players: [] };
-      sportMap.set(e.sport.id, sg);
+    let block = batchMap.get(e.batchId);
+    if (!block) {
+      block = { batch: e.batch, players: [] };
+      batchMap.set(e.batchId, block);
     }
-    sg.players.push({
+    block.players.push({
       id: e.id,
       fullName: e.fullName,
       phone: e.phone,
@@ -99,9 +114,9 @@ export default async function SportRostersPrintPage({
     });
   }
 
-  for (const sportMap of byBatchId.values()) {
-    for (const sg of sportMap.values()) {
-      sg.players.sort((a, b) => {
+  for (const batchMap of bySportId.values()) {
+    for (const block of batchMap.values()) {
+      block.players.sort((a, b) => {
         const n = a.fullName.localeCompare(b.fullName, undefined, { sensitivity: "base" });
         if (n !== 0) return n;
         return a.createdAt.getTime() - b.createdAt.getTime();
@@ -109,24 +124,26 @@ export default async function SportRostersPrintPage({
     }
   }
 
-  const batchMeta = new Map<string, { id: string; code: string; name: string | null }>();
+  const sportMeta = new Map<string, SportSection["sport"]>();
   for (const e of entries) {
-    if (!batchMeta.has(e.batchId)) batchMeta.set(e.batchId, e.batch);
+    if (!sportMeta.has(e.sport.id)) sportMeta.set(e.sport.id, e.sport);
   }
 
-  const batchGroups: BatchGroup[] = Array.from(byBatchId.entries())
-    .map(([bid, sportMap]) => {
-      const batch = batchMeta.get(bid);
-      if (!batch) return null;
-      const sports = Array.from(sportMap.values()).sort((a, b) => {
-        const o = a.sport.sortOrder - b.sport.sortOrder;
-        if (o !== 0) return o;
-        return a.sport.name.localeCompare(b.sport.name, undefined, { sensitivity: "base" });
-      });
-      return { batch, sports };
+  const sportSections: SportSection[] = Array.from(bySportId.entries())
+    .map(([sid, batchMap]) => {
+      const sport = sportMeta.get(sid);
+      if (!sport) return null;
+      const batches = Array.from(batchMap.values()).sort((a, b) =>
+        a.batch.code.localeCompare(b.batch.code, undefined, { numeric: true }),
+      );
+      return { sport, batches };
     })
-    .filter((g): g is BatchGroup => g != null)
-    .sort((a, b) => a.batch.code.localeCompare(b.batch.code, undefined, { numeric: true }));
+    .filter((s): s is SportSection => s != null)
+    .sort((a, b) => {
+      const o = a.sport.sortOrder - b.sport.sortOrder;
+      if (o !== 0) return o;
+      return a.sport.name.localeCompare(b.sport.name, undefined, { sensitivity: "base" });
+    });
 
   const visibleBatches =
     batchFilterActive && batchId ? batchesAll.filter((b) => b.id === batchId) : batchesAll;
@@ -144,14 +161,14 @@ export default async function SportRostersPrintPage({
 
       <div className="no-print flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Sport roster report</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Sport roster — by sport</h1>
           <p className="text-sm text-zinc-600">
-            Players listed by batch and sport (print or save as PDF from the print dialog).{" "}
+            Each sport lists every batch&apos;s players (print or save as PDF).{" "}
             <Link
-              href="/reports/sport-rosters/print-by-sport"
+              href="/reports/sport-rosters/print"
               className="underline underline-offset-2 hover:text-zinc-900"
             >
-              Switch to sport-first view
+              Switch to batch-first view
             </Link>
           </p>
           <Link
@@ -163,16 +180,36 @@ export default async function SportRostersPrintPage({
         </div>
 
         <div className="flex flex-wrap items-end gap-2">
-          {isAdmin && batchesAll.length > 0 ? (
-            <form method="get" className="flex items-end gap-2">
-              <BatchCombobox
-                batches={batchesAll.map((b) => ({ id: b.id, code: b.code }))}
-                name="batchId"
-                label="Batch"
-                defaultBatchId={batchId}
-                allowAll
-                inputClassName="h-10 min-w-[12rem] rounded-xl border border-black/10 bg-white px-3 text-sm outline-none focus:border-black/30"
-              />
+          {sportsAll.length > 0 ? (
+            <form method="get" className="flex flex-wrap items-end gap-2">
+              {isAdmin && batchesAll.length > 0 ? (
+                <BatchCombobox
+                  batches={batchesAll.map((b) => ({ id: b.id, code: b.code }))}
+                  name="batchId"
+                  label="Batch"
+                  defaultBatchId={batchId}
+                  allowAll
+                  inputClassName="h-10 min-w-[12rem] rounded-xl border border-black/10 bg-white px-3 text-sm outline-none focus:border-black/30"
+                />
+              ) : null}
+              <div className="space-y-1">
+                <label htmlFor="sport-filter" className="text-sm font-medium">
+                  Sport
+                </label>
+                <select
+                  id="sport-filter"
+                  name="sportId"
+                  defaultValue={sportFilterActive ? sportId : ""}
+                  className="h-10 min-w-[12rem] rounded-xl border border-black/10 bg-white px-3 text-sm outline-none focus:border-black/30"
+                >
+                  <option value="">All sports</option>
+                  {sportsAll.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({s.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
               <button
                 type="submit"
                 className="h-10 rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5"
@@ -191,7 +228,10 @@ export default async function SportRostersPrintPage({
       <div className="mt-6 rounded-2xl border border-black/10 bg-white p-4 text-sm">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="font-medium">
-            Sport rosters — by batch &amp; sport
+            Sport rosters — by sport, then batch
+            {sportFilterActive ? (
+              <span className="ml-2 font-normal text-zinc-600">(one sport)</span>
+            ) : null}
             {batchFilterActive ? (
               <span className="ml-2 font-normal text-zinc-600">(one batch)</span>
             ) : null}
@@ -205,42 +245,48 @@ export default async function SportRostersPrintPage({
           <div className="rounded-2xl border border-black/10 bg-white p-5 text-sm text-zinc-600">
             No batches found for your account.
           </div>
-        ) : batchGroups.length === 0 ? (
+        ) : sportSections.length === 0 ? (
           <div className="rounded-2xl border border-black/10 bg-white p-5 text-sm text-zinc-600">
-            No sport roster players in{" "}
-            {batchFilterActive ? "this batch" : "the selected scope"} yet.
+            No sport roster players in this scope yet.
           </div>
         ) : (
-          batchGroups.map((bg) => (
+          sportSections.map((sec) => (
             <section
-              key={bg.batch.id}
+              key={sec.sport.id}
               className="break-inside-avoid rounded-2xl border border-black/15 bg-white"
             >
               <div className="border-b border-black/10 bg-zinc-50 px-4 py-3">
-                <div className="text-lg font-semibold tabular-nums">{bg.batch.code}</div>
-                {bg.batch.name?.trim() ? (
-                  <div className="text-xs text-zinc-600">{bg.batch.name}</div>
-                ) : null}
+                <div className="text-lg font-semibold">{sec.sport.name}</div>
+                <div className="text-xs text-zinc-600">
+                  Code {sec.sport.code} · up to {sec.sport.maxPlayersPerBatch} players per batch ·{" "}
+                  <span className="font-medium text-zinc-800">
+                    {sec.batches.reduce((n, b) => n + b.players.length, 0)}
+                  </span>{" "}
+                  total in view
+                </div>
               </div>
 
               <div className="divide-y divide-black/10">
-                {bg.sports.map((sg) => (
-                  <div key={sg.sport.id} className="break-inside-avoid p-4">
-                    <div className="flex flex-wrap items-end justify-between gap-2">
+                {sec.batches.map((bb) => (
+                  <div key={bb.batch.id} className="break-inside-avoid p-4">
+                    <div className="mb-2 flex flex-wrap items-end justify-between gap-2 border-b border-black/5 pb-2">
                       <div>
-                        <div className="text-sm font-semibold">{sg.sport.name}</div>
-                        <div className="text-xs text-zinc-600">
-                          Code {sg.sport.code} · max {sg.sport.maxPlayersPerBatch} per batch ·{" "}
-                          <span className="font-medium text-zinc-800">{sg.players.length}</span> listed
-                        </div>
+                        <div className="text-sm font-semibold tabular-nums">Batch {bb.batch.code}</div>
+                        {bb.batch.name?.trim() ? (
+                          <div className="text-xs text-zinc-600">{bb.batch.name}</div>
+                        ) : null}
+                      </div>
+                      <div className="text-xs text-zinc-600">
+                        <span className="font-medium text-zinc-800">{bb.players.length}</span> /{" "}
+                        {sec.sport.maxPlayersPerBatch}
                       </div>
                     </div>
 
-                    <div className="mt-3 overflow-x-auto">
+                    <div className="overflow-x-auto">
                       <table className="w-full min-w-[480px] border-collapse text-sm">
                         <thead>
                           <tr className="text-zinc-600">
-                            <th className="border border-black/20 px-2 py-2 text-left font-medium w-10">
+                            <th className="w-10 border border-black/20 px-2 py-2 text-left font-medium">
                               #
                             </th>
                             <th className="border border-black/20 px-3 py-2 text-left font-medium">
@@ -255,7 +301,7 @@ export default async function SportRostersPrintPage({
                           </tr>
                         </thead>
                         <tbody>
-                          {sg.players.map((p, idx) => (
+                          {bb.players.map((p, idx) => (
                             <tr key={p.id}>
                               <td className="border border-black/20 px-2 py-2 tabular-nums text-zinc-600">
                                 {idx + 1}
