@@ -46,7 +46,7 @@ export default async function ReportsPage() {
         <div className="rounded-2xl border border-black/10 bg-white p-5 dark:border-white/10 dark:bg-zinc-950">
           <div className="text-sm font-semibold">Sport roster</div>
           <div className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Printable player lists — by batch first, or by sport (each sport → all batches).
+            Printable player lists — by batch or by sport. Export all rosters to CSV (Excel-compatible).
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
             <LoadingLinkButton
@@ -63,6 +63,12 @@ export default async function ReportsPage() {
             >
               By sport
             </LoadingLinkButton>
+            <a
+              href="/reports/sport-rosters/export"
+              className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
+            >
+              Export CSV
+            </a>
           </div>
         </div>
 

@@ -33,6 +33,13 @@ export default async function SportsListPage() {
           >
             by sport
           </Link>
+          {" · "}
+          <Link
+            href="/reports/sport-rosters/export"
+            className="underline underline-offset-2 hover:text-zinc-900 dark:hover:text-zinc-100"
+          >
+            export CSV
+          </Link>
           .
         </p>
       </div>

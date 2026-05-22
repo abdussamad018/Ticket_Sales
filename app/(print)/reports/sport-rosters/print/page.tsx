@@ -22,6 +22,14 @@ type BatchGroup = {
   sports: SportGroup[];
 };
 
+function rosterExportHref(params: { batchId?: string; sportId?: string }) {
+  const qs = new URLSearchParams();
+  if (params.batchId) qs.set("batchId", params.batchId);
+  if (params.sportId) qs.set("sportId", params.sportId);
+  const q = qs.toString();
+  return q ? `/reports/sport-rosters/export?${q}` : "/reports/sport-rosters/export";
+}
+
 export default async function SportRostersPrintPage({
   searchParams,
 }: {
@@ -132,6 +140,9 @@ export default async function SportRostersPrintPage({
     batchFilterActive && batchId ? batchesAll.filter((b) => b.id === batchId) : batchesAll;
 
   const today = new Date();
+  const exportUrl = rosterExportHref({
+    batchId: batchFilterActive && batchId ? batchId : undefined,
+  });
 
   return (
     <div className="w-full">
@@ -182,6 +193,12 @@ export default async function SportRostersPrintPage({
             </form>
           ) : null}
 
+          <a
+            href={exportUrl}
+            className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5"
+          >
+            Export CSV
+          </a>
           <PrintButton className="h-10 rounded-xl bg-black px-4 text-sm text-white hover:bg-black/90">
             Print
           </PrintButton>
