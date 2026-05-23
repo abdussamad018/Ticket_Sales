@@ -223,7 +223,12 @@ export default async function DashboardPage() {
         <div className="rounded-2xl border border-black/10 bg-white p-5 dark:border-white/10 dark:bg-zinc-950">
           <div className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Total registrations</div>
           <div className="mt-1 text-2xl font-semibold tabular-nums">{totalParticipants.toLocaleString()}</div>
-          <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-500">Participant records in scope</p>
+          <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-500">
+            Participant records in scope
+            {session.role === "SUPER_ADMIN" ? (
+              <> · {activeBatchesCount.toLocaleString()} active batches</>
+            ) : null}
+          </p>
         </div>
         <div className="rounded-2xl border border-black/10 bg-white p-5 dark:border-white/10 dark:bg-zinc-950">
           <div className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Tickets sold (attendees)</div>
