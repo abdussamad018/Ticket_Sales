@@ -60,7 +60,6 @@ export default async function DashboardPage() {
     activeBatchesCount,
     weekParticipantsForPulse,
     totalAttendees,
-    checkedInAttendees,
   ] = await Promise.all([
     prisma.participant.count({ where: scope }),
     prisma.attendee.groupBy({
@@ -79,8 +78,17 @@ export default async function DashboardPage() {
       },
     }),
     prisma.attendee.count({ where: { participant: scope } }),
-    prisma.attendee.count({ where: { participant: scope, checkedInAt: { not: null } } }),
   ]);
+
+  let checkedInAttendees = 0;
+  let attendanceMigrationPending = false;
+  try {
+    checkedInAttendees = await prisma.attendee.count({
+      where: { participant: scope, checkedInAt: { not: null } },
+    });
+  } catch {
+    attendanceMigrationPending = true;
+  }
 
   const ticketIds = ticketGroups.map((g) => g.ticketId);
   const ticketsMeta =
@@ -247,13 +255,17 @@ export default async function DashboardPage() {
             <span className="text-base font-normal text-zinc-500"> / {totalAttendees.toLocaleString()}</span>
           </div>
           <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-500">
-            <LoadingLinkButton
-              href="/attendance"
-              pendingText="Loading…"
-              className="underline underline-offset-2 hover:text-zinc-700 dark:hover:text-zinc-300"
-            >
-              Open check-in
-            </LoadingLinkButton>
+            {attendanceMigrationPending ? (
+              "Check-in tracking pending DB update (redeploy after migration)."
+            ) : (
+              <LoadingLinkButton
+                href="/attendance"
+                pendingText="Loading…"
+                className="underline underline-offset-2 hover:text-zinc-700 dark:hover:text-zinc-300"
+              >
+                Open check-in
+              </LoadingLinkButton>
+            )}
           </p>
         </div>
       </section>
