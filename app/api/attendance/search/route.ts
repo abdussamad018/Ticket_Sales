@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { requireSession } from "@/app/lib/auth";
-import { attendeeScopeWhere } from "@/app/lib/attendance-scope";
+import { assertBatchAccess, attendeeScopeWhereWithBatch } from "@/app/lib/attendance-scope";
 import { normalizePhoneQuery } from "@/app/lib/check-in-code";
 import { prisma } from "@/app/lib/prisma";
 
@@ -22,6 +22,8 @@ const attendeeSelect = {
   },
 } as const;
 
+const BATCH_LIST_LIMIT = 1000;
+
 export async function GET(req: Request) {
   const session = await requireSession();
   if (session.role === "BATCH_REP" && !session.batchId) {
@@ -30,11 +32,38 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url);
   const raw = url.searchParams.get("q")?.trim() ?? "";
+  const batchIdParam = url.searchParams.get("batchId")?.trim() || undefined;
+
+  const effectiveBatchId =
+    session.role === "BATCH_REP" ? session.batchId! : batchIdParam;
+
+  if (effectiveBatchId && !assertBatchAccess(session, effectiveBatchId)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const scope = attendeeScopeWhereWithBatch(session, effectiveBatchId);
+
+  if (session.role === "SUPER_ADMIN" && !effectiveBatchId) {
+    return NextResponse.json(
+      { error: "Select a batch first.", attendees: [] },
+      { status: 400 },
+    );
+  }
+
+  if (raw.length === 0) {
+    const allInBatch = await prisma.attendee.findMany({
+      where: scope,
+      select: attendeeSelect,
+      orderBy: [{ fullName: "asc" }],
+      take: BATCH_LIST_LIMIT,
+    });
+    return NextResponse.json({ attendees: allInBatch });
+  }
+
   if (raw.length < 2) {
     return NextResponse.json({ attendees: [] });
   }
 
-  const scope = attendeeScopeWhere(session);
   const codeQuery = raw.toUpperCase().replace(/\s/g, "");
 
   if (/^[A-Z0-9]{6,10}$/.test(codeQuery)) {
@@ -59,7 +88,7 @@ export async function GET(req: Request) {
       phone: { contains: phone, mode: "insensitive" },
     },
     select: attendeeSelect,
-    take: 25,
+    take: 100,
     orderBy: [{ fullName: "asc" }],
   });
 

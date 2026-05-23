@@ -20,6 +20,8 @@ type AttendeeResult = {
 
 type Stats = { total: number; checkedIn: number; pending: number };
 
+type BatchOption = { id: string; code: string };
+
 function labelType(t: string) {
   if (t === "ADULT") return "Adult";
   if (t === "CHILD") return "Child";
@@ -28,12 +30,16 @@ function labelType(t: string) {
 
 type Props = {
   initialCode?: string;
+  batches: BatchOption[];
+  defaultBatchId?: string;
+  isAdmin: boolean;
 };
 
-export function AttendanceClient({ initialCode }: Props) {
+export function AttendanceClient({ initialCode, batches, defaultBatchId, isAdmin }: Props) {
   const scanRegionId = useId().replace(/:/g, "");
   const [tab, setTab] = useState<"phone" | "scan">("phone");
   const [query, setQuery] = useState(initialCode ?? "");
+  const [batchId, setBatchId] = useState(defaultBatchId ?? "");
   const [results, setResults] = useState<AttendeeResult[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(false);
@@ -42,42 +48,70 @@ export function AttendanceClient({ initialCode }: Props) {
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const initialSearchDone = useRef(false);
 
-  const refreshStats = useCallback(async () => {
-    const res = await fetch("/api/attendance/stats");
-    if (res.ok) setStats(await res.json());
-  }, []);
+  const buildSearchUrl = useCallback(
+    (q: string) => {
+      const params = new URLSearchParams();
+      if (batchId) params.set("batchId", batchId);
+      const trimmed = q.trim();
+      if (trimmed.length > 0) params.set("q", trimmed);
+      return `/api/attendance/search?${params}`;
+    },
+    [batchId],
+  );
 
-  const runSearch = useCallback(async (q: string) => {
-    const trimmed = q.trim();
-    if (trimmed.length < 2) {
-      setResults([]);
-      return;
-    }
-    setLoading(true);
-    setMessage(null);
-    try {
-      const res = await fetch(`/api/attendance/search?q=${encodeURIComponent(trimmed)}`);
-      if (!res.ok) throw new Error("Search failed");
-      const data = (await res.json()) as { attendees: AttendeeResult[] };
-      setResults(data.attendees);
-      if (data.attendees.length === 0) setMessage("No attendees found.");
-    } catch {
-      setMessage("Search failed. Try again.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const refreshStats = useCallback(async () => {
+    if (!batchId) return;
+    const res = await fetch(`/api/attendance/stats?batchId=${encodeURIComponent(batchId)}`);
+    if (res.ok) setStats(await res.json());
+  }, [batchId]);
+
+  const runSearch = useCallback(
+    async (q: string) => {
+      if (!batchId) {
+        setMessage("Select a batch first.");
+        setResults([]);
+        return;
+      }
+
+      const trimmed = q.trim();
+      if (trimmed.length > 0 && trimmed.length < 2) {
+        setResults([]);
+        return;
+      }
+
+      setLoading(true);
+      setMessage(null);
+      try {
+        const res = await fetch(buildSearchUrl(q));
+        const data = (await res.json()) as { attendees?: AttendeeResult[]; error?: string };
+        if (!res.ok) {
+          setMessage(data.error ?? "Search failed.");
+          setResults([]);
+          return;
+        }
+        setResults(data.attendees ?? []);
+        if ((data.attendees?.length ?? 0) === 0) {
+          setMessage(trimmed ? "No attendees found." : "No attendees in this batch.");
+        }
+      } catch {
+        setMessage("Search failed. Try again.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [batchId, buildSearchUrl],
+  );
 
   useEffect(() => {
     void refreshStats();
   }, [refreshStats]);
 
   useEffect(() => {
-    if (initialCode && !initialSearchDone.current) {
+    if (initialCode && batchId && !initialSearchDone.current) {
       initialSearchDone.current = true;
       void runSearch(initialCode);
     }
-  }, [initialCode, runSearch]);
+  }, [initialCode, batchId, runSearch]);
 
   useEffect(() => {
     if (tab !== "scan") {
@@ -96,9 +130,8 @@ export function AttendanceClient({ initialCode }: Props) {
     Html5Qrcode.getCameras()
       .then((cameras) => {
         if (cancelled || cameras.length === 0) return;
-        const cameraId = cameras[0].id;
         return scanner.start(
-          cameraId,
+          cameras[0].id,
           { fps: 10, qrbox: { width: 250, height: 250 } },
           (decoded) => {
             const text = decoded.trim();
@@ -167,12 +200,48 @@ export function AttendanceClient({ initialCode }: Props) {
   }
 
   const pendingIds = results.filter((r) => !r.checkedInAt).map((r) => r.id);
+  const repBatch = !isAdmin && batches[0];
 
   return (
     <div className="space-y-6">
-      {stats ? (
+      {batches.length === 0 ? (
+        <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100">
+          Your account is not linked to a batch. Contact an administrator.
+        </p>
+      ) : isAdmin ? (
+        <div className="space-y-1">
+          <label htmlFor="attendance-batch" className="text-sm font-medium">
+            Batch
+          </label>
+          <select
+            id="attendance-batch"
+            value={batchId}
+            onChange={(e) => {
+              setBatchId(e.target.value);
+              setResults([]);
+              setMessage(null);
+            }}
+            className="h-11 w-full rounded-xl border border-black/15 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-black/20 dark:border-white/15 dark:bg-zinc-950"
+          >
+            <option value="">Select batch…</option>
+            {batches.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.code}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-zinc-500">Pick a batch, then load list or search within that batch.</p>
+        </div>
+      ) : repBatch ? (
+        <div className="rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm dark:border-white/10 dark:bg-zinc-950">
+          <span className="text-zinc-600 dark:text-zinc-400">Batch: </span>
+          <span className="font-semibold tabular-nums">{repBatch.code}</span>
+        </div>
+      ) : null}
+
+      {stats && batchId ? (
         <div className="rounded-2xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-950">
-          <div className="text-sm text-zinc-600 dark:text-zinc-400">Checked in</div>
+          <div className="text-sm text-zinc-600 dark:text-zinc-400">Checked in (this batch)</div>
           <div className="mt-1 text-2xl font-semibold tabular-nums">
             {stats.checkedIn}{" "}
             <span className="text-base font-normal text-zinc-500">/ {stats.total}</span>
@@ -216,24 +285,24 @@ export function AttendanceClient({ initialCode }: Props) {
         >
           <div className="flex-1 space-y-1">
             <label htmlFor="attendance-search" className="text-sm font-medium">
-              Phone or check-in code
+              Phone or check-in code (optional)
             </label>
             <input
               id="attendance-search"
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="e.g. 01712… or A7K2M9XQ"
+              placeholder="Leave empty for full batch list"
               autoComplete="off"
               className="h-12 w-full rounded-xl border border-black/15 bg-white px-4 text-base outline-none focus:ring-2 focus:ring-black/20 dark:border-white/15 dark:bg-zinc-950"
             />
           </div>
           <button
             type="submit"
-            disabled={loading || query.trim().length < 2}
-            className="h-12 rounded-xl bg-black px-6 text-sm text-white hover:bg-black/90 disabled:opacity-50 dark:bg-white dark:text-black"
+            disabled={loading || !batchId || (query.trim().length > 0 && query.trim().length < 2)}
+            className="h-12 shrink-0 rounded-xl bg-black px-6 text-sm text-white hover:bg-black/90 disabled:opacity-50 dark:bg-white dark:text-black"
           >
-            {loading ? "Searching…" : "Search"}
+            {loading ? "Loading…" : query.trim() ? "Search" : "Load list"}
           </button>
         </form>
       ) : (
@@ -250,6 +319,10 @@ export function AttendanceClient({ initialCode }: Props) {
 
       {results.length > 0 ? (
         <div className="space-y-3">
+          <div className="text-sm text-zinc-600 dark:text-zinc-400">
+            {results.length} attendee{results.length === 1 ? "" : "s"} shown
+          </div>
+
           {pendingIds.length > 1 ? (
             <button
               type="button"
@@ -273,7 +346,7 @@ export function AttendanceClient({ initialCode }: Props) {
                   <div>
                     <div className="font-medium">{a.fullName?.trim() || "—"}</div>
                     <div className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                      Batch {a.participant.batch.code} · {labelType(a.type)} · {a.ticket.name}
+                      {labelType(a.type)} · {a.ticket.name}
                     </div>
                     <div className="mt-1 font-mono text-xs text-zinc-500">
                       {a.phone?.trim() || "—"}

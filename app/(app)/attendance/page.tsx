@@ -1,23 +1,43 @@
 import Link from "next/link";
 
 import { requireSession } from "@/app/lib/auth";
+import { prisma } from "@/app/lib/prisma";
 import { AttendanceClient } from "./AttendanceClient";
 
 export default async function AttendancePage({
   searchParams,
 }: {
-  searchParams: Promise<{ code?: string }>;
+  searchParams: Promise<{ code?: string; batchId?: string }>;
 }) {
-  await requireSession();
-  const { code } = await searchParams;
+  const session = await requireSession();
+  const { code, batchId } = await searchParams;
   const initialCode = code?.trim().toUpperCase() || undefined;
+
+  const isAdmin = session.role === "SUPER_ADMIN";
+
+  const batches = isAdmin
+    ? await prisma.batch.findMany({
+        orderBy: { code: "asc" },
+        select: { id: true, code: true },
+      })
+    : session.batchId
+      ? await prisma.batch.findMany({
+          where: { id: session.batchId },
+          select: { id: true, code: true },
+        })
+      : [];
+
+  const defaultBatchId =
+    isAdmin && batchId && batches.some((b) => b.id === batchId)
+      ? batchId
+      : session.batchId ?? batches[0]?.id;
 
   return (
     <div className="mx-auto w-full max-w-2xl px-0 py-0">
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">Attendance check-in</h1>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Search by phone or scan QR. Each attendee is checked in separately.
+          Select batch, then search by phone/code or load the full batch list to check in.
         </p>
         <div className="flex flex-wrap gap-3 text-sm">
           <Link
@@ -36,7 +56,12 @@ export default async function AttendancePage({
       </div>
 
       <div className="mt-6">
-        <AttendanceClient initialCode={initialCode} />
+        <AttendanceClient
+          initialCode={initialCode}
+          batches={batches}
+          defaultBatchId={defaultBatchId}
+          isAdmin={isAdmin}
+        />
       </div>
     </div>
   );
