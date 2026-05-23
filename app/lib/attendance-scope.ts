@@ -3,7 +3,7 @@ import type { Prisma } from "@prisma/client";
 import type { Session } from "@/app/lib/auth";
 
 export function attendeeParticipantScopeWhere(session: Session): Prisma.ParticipantWhereInput {
-  if (session.role === "SUPER_ADMIN") return {};
+  if (session.role === "SUPER_ADMIN" || session.role === "VOLUNTEER") return {};
   if (session.role === "BATCH_REP" && session.batchId) return { batchId: session.batchId };
   return { id: { in: [] } };
 }
@@ -32,7 +32,7 @@ export function attendeeScopeWhereWithBatch(
 }
 
 export function assertBatchAccess(session: Session, batchId: string): boolean {
-  if (session.role === "SUPER_ADMIN") return true;
+  if (session.role === "SUPER_ADMIN" || session.role === "VOLUNTEER") return true;
   if (session.role === "BATCH_REP" && session.batchId === batchId) return true;
   return false;
 }

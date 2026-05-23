@@ -105,6 +105,8 @@ async function main() {
     update: {},
     create: { id: "singleton", registrationOpen: true },
   });
+
+  // Volunteers: use npm run seed:volunteers (production-safe, separate script).
 }
 
 main()

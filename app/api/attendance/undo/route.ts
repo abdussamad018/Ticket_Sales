@@ -11,6 +11,9 @@ const bodySchema = z.object({
 
 export async function POST(req: Request) {
   const session = await requireSession();
+  if (session.role === "VOLUNTEER") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   if (session.role === "BATCH_REP" && !session.batchId) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

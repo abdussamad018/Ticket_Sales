@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { requireSession } from "@/app/lib/auth";
 import { assertBatchAccess, attendeeScopeWhereWithBatch } from "@/app/lib/attendance-scope";
 import { parseCheckInCodeFromScan } from "@/app/lib/attendance-qr";
+import { normalizePhoneQuery } from "@/app/lib/check-in-code";
 import { prisma } from "@/app/lib/prisma";
 
 const attendeeSelect = {
@@ -34,14 +35,23 @@ export async function GET(req: Request) {
   const raw = url.searchParams.get("q")?.trim() ?? "";
   const batchIdParam = url.searchParams.get("batchId")?.trim() || undefined;
 
-  const effectiveBatchId =
-    session.role === "BATCH_REP" ? session.batchId! : batchIdParam;
+  const isVolunteer = session.role === "VOLUNTEER";
+
+  const effectiveBatchId = isVolunteer
+    ? undefined
+    : session.role === "BATCH_REP"
+      ? session.batchId!
+      : batchIdParam;
 
   if (effectiveBatchId && !assertBatchAccess(session, effectiveBatchId)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const scope = attendeeScopeWhereWithBatch(session, effectiveBatchId);
+  const scope = isVolunteer ? {} : attendeeScopeWhereWithBatch(session, effectiveBatchId);
+
+  if (isVolunteer && raw.length === 0) {
+    return NextResponse.json({ error: "Scan a QR code.", attendees: [] }, { status: 400 });
+  }
 
   if (session.role === "SUPER_ADMIN" && !effectiveBatchId) {
     return NextResponse.json(

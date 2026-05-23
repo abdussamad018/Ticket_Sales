@@ -5,9 +5,11 @@ import bcrypt from "bcryptjs";
 
 import { prisma } from "@/app/lib/prisma";
 
+export type SessionRole = "SUPER_ADMIN" | "BATCH_REP" | "VOLUNTEER";
+
 export type Session = {
   userId: string;
-  role: "SUPER_ADMIN" | "BATCH_REP";
+  role: SessionRole;
   batchId: string | null;
 };
 
@@ -60,7 +62,9 @@ export async function getSession(): Promise<Session | null> {
     const { payload } = await jwtVerify(token, secret);
     if (
       typeof payload.userId !== "string" ||
-      (payload.role !== "SUPER_ADMIN" && payload.role !== "BATCH_REP")
+      (payload.role !== "SUPER_ADMIN" &&
+        payload.role !== "BATCH_REP" &&
+        payload.role !== "VOLUNTEER")
     ) {
       return null;
     }
@@ -82,8 +86,13 @@ export async function requireSession() {
 
 export async function requireSuperAdmin() {
   const session = await requireSession();
+  if (session.role === "VOLUNTEER") redirect("/attendance");
   if (session.role !== "SUPER_ADMIN") redirect("/dashboard");
   return session;
+}
+
+export function isVolunteer(session: Session) {
+  return session.role === "VOLUNTEER";
 }
 
 export async function signIn(email: string, password: string) {

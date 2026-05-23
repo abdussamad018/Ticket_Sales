@@ -37,6 +37,16 @@ export default async function AdminHomePage() {
 
         <Link
           className="rounded-2xl border border-black/10 bg-white p-5 hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
+          href="/admin/volunteers"
+        >
+          <div className="text-sm font-semibold">Volunteers</div>
+          <div className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            Gate QR check-in only — add or deactivate volunteers
+          </div>
+        </Link>
+
+        <Link
+          className="rounded-2xl border border-black/10 bg-white p-5 hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
           href="/admin/batches"
         >
           <div className="text-sm font-semibold">Batches</div>

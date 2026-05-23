@@ -12,6 +12,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "prisma db seed",
+    "seed:volunteers": "tsx scripts/seed-volunteers.ts",
     "backfill:check-in-codes": "tsx scripts/backfill-check-in-codes.ts"
   },
   "dependencies": {

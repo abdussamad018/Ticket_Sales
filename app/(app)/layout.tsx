@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { requireSession } from "@/app/lib/auth";
+import { isVolunteer, requireSession } from "@/app/lib/auth";
 import { prisma } from "@/app/lib/prisma";
 import { LoadingLinkButton } from "@/app/ui/LoadingLinkButton";
 
@@ -24,6 +24,7 @@ function NavLink({
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await requireSession();
+  const volunteer = isVolunteer(session);
   const me = await prisma.user.findUnique({
     where: { id: session.userId },
     include: { batch: true },
@@ -34,7 +35,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <header className="sticky top-0 z-20 w-full border-b border-black/10 bg-white/80 backdrop-blur dark:border-white/10 dark:bg-zinc-950/80">
         <div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between gap-3 px-4">
           <div className="flex items-center gap-3">
-            <Link href="/dashboard" className="text-sm font-semibold tracking-tight">
+            <Link href={volunteer ? "/attendance" : "/dashboard"} className="text-sm font-semibold tracking-tight">
             অভিষেক ও ঈদ পুনর্মিলনী
             </Link>
           </div>
@@ -66,91 +67,95 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </header>
 
       <div className="mx-auto flex w-full max-w-7xl flex-1 gap-4 px-4 py-6">
-        <aside className="hidden w-64 shrink-0 lg:block">
-          <div className="rounded-2xl border border-black/10 bg-white p-3 dark:border-white/10 dark:bg-zinc-950">
-            <div className="px-2 pb-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-              Navigation
+        {!volunteer ? (
+          <aside className="hidden w-64 shrink-0 lg:block">
+            <div className="rounded-2xl border border-black/10 bg-white p-3 dark:border-white/10 dark:bg-zinc-950">
+              <div className="px-2 pb-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                Navigation
+              </div>
+              <nav className="flex flex-col gap-1">
+                <NavLink href="/dashboard" label="Dashboard" />
+                <NavLink href="/participants" label="Participants" />
+                <NavLink href="/participants/new" label="Add participant" />
+                <NavLink href="/attendance" label="Attendance" />
+                <NavLink href="/reports" label="Reports" />
+                <NavLink href="/sports" label="Sports roster" />
+                {session.role === "SUPER_ADMIN" ? (
+                  <>
+                    <NavLink href="/admin" label="Admin" />
+                    <NavLink href="/admin/cash-settlements" label="Cash settlements" />
+                  </>
+                ) : null}
+              </nav>
             </div>
-            <nav className="flex flex-col gap-1">
-              <NavLink href="/dashboard" label="Dashboard" />
-              <NavLink href="/participants" label="Participants" />
-              <NavLink href="/participants/new" label="Add participant" />
-              <NavLink href="/attendance" label="Attendance" />
-              <NavLink href="/reports" label="Reports" />
-              <NavLink href="/sports" label="Sports roster" />
-              {session.role === "SUPER_ADMIN" ? (
-                <>
-                  <NavLink href="/admin" label="Admin" />
-                  <NavLink href="/admin/cash-settlements" label="Cash settlements" />
-                </>
-              ) : null}
-            </nav>
-          </div>
-        </aside>
+          </aside>
+        ) : null}
 
         <main className="min-w-0 flex-1">
-          <div className="mb-4 flex gap-2 overflow-x-auto lg:hidden">
-            <LoadingLinkButton
-              href="/dashboard"
-              pendingText="Loading…"
-              className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
-            >
-              Dashboard
-            </LoadingLinkButton>
-            <LoadingLinkButton
-              href="/participants"
-              pendingText="Loading…"
-              className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
-            >
-              Participants
-            </LoadingLinkButton>
-            <LoadingLinkButton
-              href="/participants/new"
-              pendingText="Loading…"
-              className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
-            >
-              Add participant
-            </LoadingLinkButton>
-            <LoadingLinkButton
-              href="/attendance"
-              pendingText="Loading…"
-              className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
-            >
-              Attendance
-            </LoadingLinkButton>
-            <LoadingLinkButton
-              href="/reports"
-              pendingText="Loading…"
-              className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
-            >
-              Reports
-            </LoadingLinkButton>
-            <LoadingLinkButton
-              href="/sports"
-              pendingText="Loading…"
-              className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
-            >
-              Sports roster
-            </LoadingLinkButton>
-            {session.role === "SUPER_ADMIN" ? (
-              <>
-                <LoadingLinkButton
-                  href="/admin"
-                  pendingText="Loading…"
-                  className="inline-flex h-10 items-center rounded-xl bg-black px-4 text-sm text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
-                >
-                  Admin
-                </LoadingLinkButton>
-                <LoadingLinkButton
-                  href="/admin/cash-settlements"
-                  pendingText="Loading…"
-                  className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
-                >
-                  Cash settlements
-                </LoadingLinkButton>
-              </>
-            ) : null}
-          </div>
+          {!volunteer ? (
+            <div className="mb-4 flex gap-2 overflow-x-auto lg:hidden">
+              <LoadingLinkButton
+                href="/dashboard"
+                pendingText="Loading…"
+                className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
+              >
+                Dashboard
+              </LoadingLinkButton>
+              <LoadingLinkButton
+                href="/participants"
+                pendingText="Loading…"
+                className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
+              >
+                Participants
+              </LoadingLinkButton>
+              <LoadingLinkButton
+                href="/participants/new"
+                pendingText="Loading…"
+                className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
+              >
+                Add participant
+              </LoadingLinkButton>
+              <LoadingLinkButton
+                href="/attendance"
+                pendingText="Loading…"
+                className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
+              >
+                Attendance
+              </LoadingLinkButton>
+              <LoadingLinkButton
+                href="/reports"
+                pendingText="Loading…"
+                className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
+              >
+                Reports
+              </LoadingLinkButton>
+              <LoadingLinkButton
+                href="/sports"
+                pendingText="Loading…"
+                className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
+              >
+                Sports roster
+              </LoadingLinkButton>
+              {session.role === "SUPER_ADMIN" ? (
+                <>
+                  <LoadingLinkButton
+                    href="/admin"
+                    pendingText="Loading…"
+                    className="inline-flex h-10 items-center rounded-xl bg-black px-4 text-sm text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+                  >
+                    Admin
+                  </LoadingLinkButton>
+                  <LoadingLinkButton
+                    href="/admin/cash-settlements"
+                    pendingText="Loading…"
+                    className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
+                  >
+                    Cash settlements
+                  </LoadingLinkButton>
+                </>
+              ) : null}
+            </div>
+          ) : null}
 
           {children}
         </main>

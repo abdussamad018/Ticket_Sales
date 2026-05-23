@@ -9,6 +9,7 @@ datasource db {
 enum Role {
   SUPER_ADMIN
   BATCH_REP
+  VOLUNTEER
 }
 
 enum TshirtSize {

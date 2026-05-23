@@ -1,8 +1,9 @@
 import Link from "next/link";
 
-import { requireSession } from "@/app/lib/auth";
+import { isVolunteer, requireSession } from "@/app/lib/auth";
 import { prisma } from "@/app/lib/prisma";
 import { AttendanceClient } from "./AttendanceClient";
+import { VolunteerScanClient } from "./VolunteerScanClient";
 
 export default async function AttendancePage({
   searchParams,
@@ -10,6 +11,22 @@ export default async function AttendancePage({
   searchParams: Promise<{ code?: string; batchId?: string }>;
 }) {
   const session = await requireSession();
+  const volunteer = isVolunteer(session);
+
+  if (volunteer) {
+    return (
+      <div className="mx-auto w-full max-w-lg px-0 py-0">
+        <div className="space-y-1 text-center sm:text-left">
+          <h1 className="text-2xl font-semibold tracking-tight">Gate check-in</h1>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">Scan attendee QR code to check in.</p>
+        </div>
+        <div className="mt-6">
+          <VolunteerScanClient />
+        </div>
+      </div>
+    );
+  }
+
   const { code, batchId } = await searchParams;
   const initialCode = code?.trim().toUpperCase() || undefined;
 
@@ -30,7 +47,7 @@ export default async function AttendancePage({
   const defaultBatchId =
     isAdmin && batchId && batches.some((b) => b.id === batchId)
       ? batchId
-      : session.batchId ?? batches[0]?.id;
+      : (session.batchId ?? batches[0]?.id);
 
   return (
     <div className="mx-auto w-full max-w-2xl px-0 py-0">

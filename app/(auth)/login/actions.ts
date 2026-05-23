@@ -34,6 +34,10 @@ export async function loginAction(formData: FormData) {
     redirect("/login?" + q.toString());
   }
 
+  if (res.role === "VOLUNTEER") {
+    redirect("/attendance");
+  }
+
   redirect(parsed.data.next && parsed.data.next.startsWith("/") ? parsed.data.next : "/dashboard");
 }
 
