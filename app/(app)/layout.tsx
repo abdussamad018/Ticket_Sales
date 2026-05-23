@@ -75,6 +75,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               <NavLink href="/dashboard" label="Dashboard" />
               <NavLink href="/participants" label="Participants" />
               <NavLink href="/participants/new" label="Add participant" />
+              <NavLink href="/attendance" label="Attendance" />
               <NavLink href="/reports" label="Reports" />
               <NavLink href="/sports" label="Sports roster" />
               {session.role === "SUPER_ADMIN" ? (
@@ -109,6 +110,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
             >
               Add participant
+            </LoadingLinkButton>
+            <LoadingLinkButton
+              href="/attendance"
+              pendingText="Loading…"
+              className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
+            >
+              Attendance
             </LoadingLinkButton>
             <LoadingLinkButton
               href="/reports"

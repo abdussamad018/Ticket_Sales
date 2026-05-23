@@ -44,6 +44,35 @@ export default async function ReportsPage() {
         </div>
 
         <div className="rounded-2xl border border-black/10 bg-white p-5 dark:border-white/10 dark:bg-zinc-950">
+          <div className="text-sm font-semibold">Attendee attendance</div>
+          <div className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            Batch-wise sign-in sheets for manual signature, digital check-in, and CSV export.
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <LoadingLinkButton
+              href="/reports/attendance/sign-sheet"
+              pendingText="Opening…"
+              className="inline-flex h-10 items-center rounded-xl bg-black px-4 text-sm text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+            >
+              Sign-in sheet
+            </LoadingLinkButton>
+            <LoadingLinkButton
+              href="/attendance"
+              pendingText="Opening…"
+              className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
+            >
+              Check-in
+            </LoadingLinkButton>
+            <a
+              href="/reports/attendance/export"
+              className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
+            >
+              Export CSV
+            </a>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-black/10 bg-white p-5 dark:border-white/10 dark:bg-zinc-950">
           <div className="text-sm font-semibold">Sport roster</div>
           <div className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
             Printable player lists — by batch or by sport. Export all rosters to CSV (Excel-compatible).

@@ -59,6 +59,8 @@ export default async function DashboardPage() {
     ticketGroups,
     activeBatchesCount,
     weekParticipantsForPulse,
+    totalAttendees,
+    checkedInAttendees,
   ] = await Promise.all([
     prisma.participant.count({ where: scope }),
     prisma.attendee.groupBy({
@@ -76,6 +78,8 @@ export default async function DashboardPage() {
         attendees: { select: { ticket: { select: { price: true } } } },
       },
     }),
+    prisma.attendee.count({ where: { participant: scope } }),
+    prisma.attendee.count({ where: { participant: scope, checkedInAt: { not: null } } }),
   ]);
 
   const ticketIds = ticketGroups.map((g) => g.ticketId);
@@ -191,6 +195,13 @@ export default async function DashboardPage() {
           </LoadingLinkButton>
           <LoadingLinkButton
             className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
+            href="/attendance"
+            pendingText="Loading…"
+          >
+            Attendance
+          </LoadingLinkButton>
+          <LoadingLinkButton
+            className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
             href="/reports"
             pendingText="Loading…"
           >
@@ -225,12 +236,19 @@ export default async function DashboardPage() {
           <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-500">BDT (sum of ticket prices × counts)</p>
         </div>
         <div className="rounded-2xl border border-black/10 bg-white p-5 dark:border-white/10 dark:bg-zinc-950">
-          <div className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Active batches</div>
+          <div className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Checked in</div>
           <div className="mt-1 text-2xl font-semibold tabular-nums">
-            {session.role === "SUPER_ADMIN" ? activeBatchesCount.toLocaleString() : "—"}
+            {checkedInAttendees.toLocaleString()}
+            <span className="text-base font-normal text-zinc-500"> / {totalAttendees.toLocaleString()}</span>
           </div>
           <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-500">
-            {session.role === "SUPER_ADMIN" ? "Batches marked active" : "Super Admin only"}
+            <LoadingLinkButton
+              href="/attendance"
+              pendingText="Loading…"
+              className="underline underline-offset-2 hover:text-zinc-700 dark:hover:text-zinc-300"
+            >
+              Open check-in
+            </LoadingLinkButton>
           </p>
         </div>
       </section>

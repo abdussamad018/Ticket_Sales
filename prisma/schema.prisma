@@ -58,6 +58,7 @@ model User {
   createdParticipants Participant[] @relation("CreatedBy")
   cashSettlementsRecorded BatchCashSettlement[] @relation("CashSettlementsRecorded")
   sportRosterEntriesCreated SportRosterEntry[] @relation("SportRosterCreatedBy")
+  attendeesCheckedIn Attendee[] @relation("AttendeeCheckIn")
 
   @@index([role])
   @@index([batchId])
@@ -133,6 +134,12 @@ model Attendee {
   phone    String?
   tshirt   TshirtSize?
 
+  /// Short code for QR / manual lookup at gate.
+  checkInCode String? @unique
+  checkedInAt DateTime?
+  checkedInById String?
+  checkedInBy   User?   @relation("AttendeeCheckIn", fields: [checkedInById], references: [id], onDelete: SetNull)
+
   ticketId String
   ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Restrict)
 
@@ -146,6 +153,8 @@ model Attendee {
   @@index([type])
   @@index([tshirt])
   @@index([ticketId])
+  @@index([phone])
+  @@index([checkedInAt])
 }
 
 model SystemSetting {

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { requireSession } from "@/app/lib/auth";
 import { prisma } from "@/app/lib/prisma";
+import { generateUniqueCheckInCode } from "@/app/lib/check-in-code";
 
 const sizeSchema = z.enum(["XS", "S", "M", "L", "XL", "XXL", "XXXL"]);
 type TshirtSize = z.infer<typeof sizeSchema>;
@@ -101,6 +102,23 @@ export async function createParticipantAction(formData: FormData) {
 
   if (attendees.length === 0) participantFormError("Select at least one ticket.");
 
+  const attendeesWithCodes: Array<{
+    type: "ADULT" | "CHILD" | "INFANT";
+    fullName: string | null;
+    phone: string | null;
+    tshirt: TshirtSize | null;
+    ticketId: string;
+    checkInCode: string;
+  }> = [];
+
+  for (const a of attendees) {
+    const checkInCode = await generateUniqueCheckInCode(async (c) => {
+      const hit = await prisma.attendee.findUnique({ where: { checkInCode: c }, select: { id: true } });
+      return !!hit;
+    });
+    attendeesWithCodes.push({ ...a, checkInCode });
+  }
+
   const created = await prisma.participant.create({
     data: {
       batchId,
@@ -111,14 +129,13 @@ export async function createParticipantAction(formData: FormData) {
       notes: parsed.data.notes?.trim() || null,
       createdById: session.userId,
       attendees: {
-        // Prisma enum typing isn't available in this workspace's generated d.ts,
-        // but runtime values are valid because they match the Prisma schema.
-        create: attendees as unknown as Array<{
+        create: attendeesWithCodes as unknown as Array<{
           type: "ADULT" | "CHILD" | "INFANT";
           fullName: string | null;
           phone: string | null;
           tshirt: TshirtSize | null;
           ticketId: string;
+          checkInCode: string;
         }>,
       },
     },
