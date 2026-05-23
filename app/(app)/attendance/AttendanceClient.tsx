@@ -3,6 +3,8 @@
 import { Html5Qrcode } from "html5-qrcode";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 
+import { BatchCombobox } from "@/app/ui/BatchCombobox";
+
 type AttendeeResult = {
   id: string;
   fullName: string | null;
@@ -209,28 +211,22 @@ export function AttendanceClient({ initialCode, batches, defaultBatchId, isAdmin
           Your account is not linked to a batch. Contact an administrator.
         </p>
       ) : isAdmin ? (
-        <div className="space-y-1">
-          <label htmlFor="attendance-batch" className="text-sm font-medium">
-            Batch
-          </label>
-          <select
-            id="attendance-batch"
-            value={batchId}
-            onChange={(e) => {
-              setBatchId(e.target.value);
+        <div className="rounded-2xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-zinc-950">
+          <BatchCombobox
+            batches={batches}
+            name="attendanceBatch"
+            label="Batch"
+            defaultBatchId={batchId || defaultBatchId}
+            allowAll={false}
+            placeholder="Type batch code (e.g. 2014)"
+            inputClassName="h-11 w-full rounded-xl border border-black/15 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-black/20 dark:border-white/15 dark:bg-zinc-950"
+            onBatchChange={(id) => {
+              setBatchId(id);
               setResults([]);
               setMessage(null);
             }}
-            className="h-11 w-full rounded-xl border border-black/15 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-black/20 dark:border-white/15 dark:bg-zinc-950"
-          >
-            <option value="">Select batch…</option>
-            {batches.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.code}
-              </option>
-            ))}
-          </select>
-          <p className="text-xs text-zinc-500">Pick a batch, then load list or search within that batch.</p>
+          />
+          <p className="mt-2 text-xs text-zinc-500">Pick a batch, then load list or search within that batch.</p>
         </div>
       ) : repBatch ? (
         <div className="rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm dark:border-white/10 dark:bg-zinc-950">

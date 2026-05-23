@@ -18,6 +18,8 @@ type Props = {
   placeholder?: string;
   /** Extra classes for the text input */
   inputClassName?: string;
+  /** Called when a valid batch is selected or cleared */
+  onBatchChange?: (batchId: string) => void;
 };
 
 export function BatchCombobox({
@@ -28,6 +30,7 @@ export function BatchCombobox({
   allowAll,
   placeholder,
   inputClassName,
+  onBatchChange,
 }: Props) {
   const listId = useId();
   const byCode = useMemo(() => new Map(batches.map((b) => [b.code.toLowerCase(), b])), [batches]);
@@ -41,9 +44,16 @@ export function BatchCombobox({
     setText(nextText);
     const trimmed = nextText.trim().toLowerCase();
     const match = byCode.get(trimmed);
-    if (match) setSelectedId(match.id);
-    else if (allowAll && trimmed === "") setSelectedId("");
-    else setSelectedId("");
+    if (match) {
+      setSelectedId(match.id);
+      onBatchChange?.(match.id);
+    } else if (allowAll && trimmed === "") {
+      setSelectedId("");
+      onBatchChange?.("");
+    } else {
+      setSelectedId("");
+      onBatchChange?.("");
+    }
   }
 
   return (
