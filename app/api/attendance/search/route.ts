@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { requireSession } from "@/app/lib/auth";
 import { assertBatchAccess, attendeeScopeWhereWithBatch } from "@/app/lib/attendance-scope";
-import { normalizePhoneQuery } from "@/app/lib/check-in-code";
+import { parseCheckInCodeFromScan } from "@/app/lib/attendance-qr";
 import { prisma } from "@/app/lib/prisma";
 
 const attendeeSelect = {
@@ -62,6 +62,18 @@ export async function GET(req: Request) {
 
   if (raw.length < 2) {
     return NextResponse.json({ attendees: [] });
+  }
+
+  const fromQr = parseCheckInCodeFromScan(raw);
+  if (fromQr) {
+    const byCode = await prisma.attendee.findMany({
+      where: { ...scope, checkInCode: fromQr },
+      select: attendeeSelect,
+      take: 25,
+    });
+    if (byCode.length > 0) {
+      return NextResponse.json({ attendees: byCode });
+    }
   }
 
   const codeQuery = raw.toUpperCase().replace(/\s/g, "");

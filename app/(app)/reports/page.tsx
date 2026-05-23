@@ -57,6 +57,13 @@ export default async function ReportsPage() {
               Sign-in sheet
             </LoadingLinkButton>
             <LoadingLinkButton
+              href="/reports/attendance/qr-cards"
+              pendingText="Opening…"
+              className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"
+            >
+              QR cards
+            </LoadingLinkButton>
+            <LoadingLinkButton
               href="/attendance"
               pendingText="Opening…"
               className="inline-flex h-10 items-center rounded-xl border border-black/10 bg-white px-4 text-sm hover:bg-black/5 dark:border-white/10 dark:bg-zinc-950 dark:hover:bg-white/10"

@@ -46,6 +46,12 @@ export default async function AttendancePage({
           >
             Print sign-in sheets
           </Link>
+          <Link
+            href="/reports/attendance/qr-cards"
+            className="text-zinc-600 underline underline-offset-2 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+          >
+            Print QR cards
+          </Link>
           <a
             href="/reports/attendance/export"
             className="text-zinc-600 underline underline-offset-2 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"

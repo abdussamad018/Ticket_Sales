@@ -3,6 +3,7 @@ import Link from "next/link";
 import { requireSuperAdmin } from "@/app/lib/auth";
 import { prisma } from "@/app/lib/prisma";
 import { setRegistrationAction } from "@/app/admin/settings/actions";
+import { BackfillCheckInCodesButton } from "./BackfillCheckInCodesButton";
 import { SubmitButton } from "@/app/ui/SubmitButton";
 
 export default async function AdminSettingsPage({
@@ -82,6 +83,17 @@ export default async function AdminSettingsPage({
             Save
           </SubmitButton>
         </form>
+      </section>
+
+      <section className="mt-6 rounded-2xl border border-black/10 bg-white p-5 dark:border-white/10 dark:bg-zinc-950">
+        <h2 className="text-base font-semibold">Attendance QR codes</h2>
+        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+          Assign unique check-in codes to attendees who do not have one (needed for QR cards and gate
+          scan). Also runs automatically on each Vercel deploy.
+        </p>
+        <div className="mt-4">
+          <BackfillCheckInCodesButton />
+        </div>
       </section>
     </div>
   );

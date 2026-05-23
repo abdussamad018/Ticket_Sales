@@ -3,6 +3,7 @@
 import { Html5Qrcode } from "html5-qrcode";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 
+import { parseCheckInCodeFromScan } from "@/app/lib/attendance-qr";
 import { BatchCombobox } from "@/app/ui/BatchCombobox";
 
 type AttendeeResult = {
@@ -136,9 +137,8 @@ export function AttendanceClient({ initialCode, batches, defaultBatchId, isAdmin
           cameras[0].id,
           { fps: 10, qrbox: { width: 250, height: 250 } },
           (decoded) => {
-            const text = decoded.trim();
-            const codeMatch = text.match(/[?&]code=([A-Z0-9]+)/i);
-            const code = codeMatch ? codeMatch[1].toUpperCase() : text.toUpperCase().replace(/\s/g, "");
+            const code = parseCheckInCodeFromScan(decoded);
+            if (!code) return;
             setQuery(code);
             setTab("phone");
             void runSearch(code);

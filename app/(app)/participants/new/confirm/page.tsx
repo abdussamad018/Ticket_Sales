@@ -186,11 +186,18 @@ export default async function ConfirmRegistrationPage({
                 </div>
                 {a.checkInCode ? (
                   <div className="flex flex-wrap items-center gap-4 border-t border-emerald-200/50 pt-3 sm:col-span-2 dark:border-emerald-900/30">
-                    <AttendeeCheckInQr code={a.checkInCode} />
+                    <AttendeeCheckInQr
+                      code={a.checkInCode}
+                      batchCode={participant.batch.code}
+                      name={a.fullName?.trim() || "—"}
+                    />
                     <div>
                       <div className="text-xs text-zinc-600 dark:text-zinc-400">গেট check-in কোড</div>
                       <div className="font-mono text-sm font-semibold tracking-wide">{a.checkInCode}</div>
-                      <div className="mt-1 text-xs text-zinc-500">ইভেন্ট দিন QR scan বা কোড দেখান</div>
+                      <div className="mt-1 text-xs text-zinc-500">
+                        Batch {participant.batch.code} · {a.fullName?.trim() || "—"}
+                      </div>
+                      <div className="mt-1 text-xs text-zinc-500">ইভেন্টে দিন QR scan বা কোড দেখান</div>
                     </div>
                   </div>
                 ) : null}

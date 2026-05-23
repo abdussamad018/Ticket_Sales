@@ -1,15 +1,30 @@
-import { headers } from "next/headers";
 import QRCode from "qrcode";
 
-export async function AttendeeCheckInQr({ code }: { code: string }) {
-  const headersList = await headers();
-  const host = headersList.get("x-forwarded-host") ?? headersList.get("host") ?? "localhost:3000";
-  const proto = headersList.get("x-forwarded-proto") ?? "http";
-  const url = `${proto}://${host}/attendance?code=${encodeURIComponent(code)}`;
-  const dataUrl = await QRCode.toDataURL(url, { width: 120, margin: 1 });
+import { buildAttendanceQrPayload } from "@/app/lib/attendance-qr";
+
+type Props = {
+  code: string;
+  batchCode: string;
+  name: string;
+  size?: number;
+};
+
+export async function AttendeeCheckInQr({ code, batchCode, name, size = 120 }: Props) {
+  const payload = buildAttendanceQrPayload({ code, batch: batchCode, name });
+  const dataUrl = await QRCode.toDataURL(payload, {
+    width: size,
+    margin: 1,
+    color: { dark: "#000000", light: "#ffffff" },
+  });
 
   return (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={dataUrl} alt={`Check-in QR ${code}`} width={120} height={120} className="rounded-lg" />
+    <img
+      src={dataUrl}
+      alt={`Check-in QR ${code}`}
+      width={size}
+      height={size}
+      className="rounded-lg bg-white"
+    />
   );
 }
