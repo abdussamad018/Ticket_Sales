@@ -1,4 +1,4 @@
-import { Html5Qrcode, type Html5QrcodeCameraScanConfig } from "html5-qrcode";
+import { Html5Qrcode } from "html5-qrcode";
 
 const BACK_CAMERA_LABEL = /back|rear|environment|world|后置/i;
 const FRONT_CAMERA_LABEL = /front|user|selfie|facetime|前置/i;
@@ -31,13 +31,10 @@ export async function startQrScannerWithBackCamera(
   onSuccess: (decoded: string) => void,
 ): Promise<void> {
   const onError = () => {};
-  const rearFacing: Html5QrcodeCameraScanConfig = { facingMode: "environment" };
-
   const cameras = await Html5Qrcode.getCameras();
-  if (cameras.length > 0) {
-    await scanner.start(pickBackCameraId(cameras), config, onSuccess, onError);
-    return;
+  if (cameras.length === 0) {
+    throw new Error("No camera found");
   }
 
-  await scanner.start(rearFacing, config, onSuccess, onError);
+  await scanner.start(pickBackCameraId(cameras), config, onSuccess, onError);
 }
