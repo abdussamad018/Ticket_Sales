@@ -7,7 +7,7 @@ import { gateFeedback } from "@/app/lib/gate-feedback";
 import { QrScanner } from "@/app/ui/QrScanner";
 import { useScreenWakeLock } from "@/app/ui/useScreenWakeLock";
 
-type AlertKind = "success" | "error" | "neutral";
+type AlertKind = "success" | "error" | "neutral" | "pending";
 
 type Alert = {
   kind: AlertKind;
@@ -22,13 +22,14 @@ type ScanResponse = {
   error?: string;
 };
 
-async function postCheckIn(code: string, scan: string) {
+function postCheckIn(code: string) {
   return fetch("/api/attendance/volunteer-scan", {
     method: "POST",
     credentials: "same-origin",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ code, scan }),
+    body: JSON.stringify({ code }),
     cache: "no-store",
+    keepalive: true,
   });
 }
 
@@ -37,43 +38,38 @@ export function VolunteerScanClient() {
 
   const [alert, setAlert] = useState<Alert | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
-  const busyRef = useRef(false);
+  const inFlightRef = useRef<Set<string>>(new Set());
   const lastCodeRef = useRef<string | null>(null);
   const lastAtRef = useRef(0);
   const alertTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const showAlert = useCallback((next: Alert) => {
+  const showAlert = useCallback((next: Alert, autoClearMs?: number) => {
     setAlert(next);
-    gateFeedback(next.kind);
+    if (next.kind !== "pending") gateFeedback(next.kind);
     if (alertTimerRef.current) clearTimeout(alertTimerRef.current);
-    const ms = next.kind === "success" ? 1400 : next.kind === "error" ? 2500 : 2200;
+    if (next.kind === "pending") return;
+    const ms =
+      autoClearMs ??
+      (next.kind === "success" ? 1000 : next.kind === "error" ? 2000 : 1800);
     alertTimerRef.current = setTimeout(() => setAlert(null), ms);
   }, []);
 
-  const handleApiResponse = useCallback(
+  const finalize = useCallback(
     (res: Response, data: ScanResponse, code: string) => {
       if (res.status === 403) {
         showAlert({ kind: "neutral", title: "Login again as volunteer" });
         return;
       }
       if (!res.ok) {
-        showAlert({ kind: "neutral", title: data.error ?? "Check-in failed" });
+        showAlert({ kind: "neutral", title: data.error ?? "Failed" });
         return;
       }
       if (data.status === "checked_in") {
-        showAlert({
-          kind: "success",
-          title: "✓ Checked in",
-          detail: data.detail,
-        });
+        showAlert({ kind: "success", title: "✓ Checked in", detail: data.detail });
         return;
       }
       if (data.status === "already_checked_in") {
-        showAlert({
-          kind: "error",
-          title: "Already checked in",
-          detail: data.detail,
-        });
+        showAlert({ kind: "error", title: "Already checked in", detail: data.detail });
         return;
       }
       showAlert({
@@ -87,24 +83,19 @@ export function VolunteerScanClient() {
 
   const processScan = useCallback(
     async (raw: string) => {
-      const trimmed = raw.trim();
-      if (!trimmed || busyRef.current) return;
-
-      const code = parseCheckInCodeFromScan(trimmed);
-      if (!code) return;
+      const code = parseCheckInCodeFromScan(raw.trim());
+      if (!code || inFlightRef.current.has(code)) return;
 
       const now = Date.now();
-      if (lastCodeRef.current === code && now - lastAtRef.current < 900) return;
+      if (lastCodeRef.current === code && now - lastAtRef.current < 500) return;
       lastCodeRef.current = code;
       lastAtRef.current = now;
 
-      busyRef.current = true;
+      inFlightRef.current.add(code);
+      showAlert({ kind: "pending", title: "…" });
+
       try {
-        let res = await postCheckIn(code, trimmed);
-        if (!res.ok && res.status >= 500) {
-          await new Promise((r) => setTimeout(r, 300));
-          res = await postCheckIn(code, trimmed);
-        }
+        const res = await postCheckIn(code);
         let data: ScanResponse = {};
         try {
           data = (await res.json()) as ScanResponse;
@@ -112,14 +103,14 @@ export function VolunteerScanClient() {
           showAlert({ kind: "neutral", title: "Server error" });
           return;
         }
-        handleApiResponse(res, data, code);
+        finalize(res, data, code);
       } catch {
         showAlert({ kind: "neutral", title: "Network error" });
       } finally {
-        busyRef.current = false;
+        inFlightRef.current.delete(code);
       }
     },
-    [handleApiResponse, showAlert],
+    [finalize, showAlert],
   );
 
   useEffect(() => {
@@ -133,9 +124,11 @@ export function VolunteerScanClient() {
       ? "border-emerald-400 bg-emerald-50 text-emerald-950"
       : alert?.kind === "error"
         ? "border-red-400 bg-red-50 text-red-950"
-        : alert
-          ? "border-amber-200 bg-amber-50 text-amber-950"
-          : "border-zinc-200 bg-zinc-50 text-zinc-400";
+        : alert?.kind === "pending"
+          ? "border-zinc-300 bg-zinc-100 text-zinc-600"
+          : alert
+            ? "border-amber-200 bg-amber-50 text-amber-950"
+            : "border-zinc-200 bg-zinc-50 text-zinc-400";
 
   return (
     <section className="flex flex-col gap-3">
@@ -150,7 +143,7 @@ export function VolunteerScanClient() {
       <section
         role="status"
         aria-live="assertive"
-        className={`flex min-h-[140px] flex-col items-center justify-center rounded-2xl border-2 px-4 py-6 text-center ${alertClass}`}
+        className={`flex min-h-[140px] flex-col items-center justify-center rounded-2xl border-2 px-4 py-6 text-center transition-colors duration-75 ${alertClass}`}
       >
         {cameraError ? (
           <>

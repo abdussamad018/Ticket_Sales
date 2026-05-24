@@ -44,7 +44,7 @@ export function QrScanner({ active = true, variant = "default", onScan, onError 
 
   const isGate = variant === "gate";
   const minHeight = isGate ? "220px" : "min(70vw, 320px)";
-  const dedupeMs = isGate ? 900 : 2000;
+  const dedupeMs = isGate ? 450 : 2000;
 
   useEffect(() => {
     if (!active) return;
@@ -76,15 +76,17 @@ export function QrScanner({ active = true, variant = "default", onScan, onError 
         await scanner.start(
           cameraId,
           {
-            fps: isGate ? 20 : 10,
+            fps: isGate ? 24 : 10,
             qrbox: (viewfinderWidth, viewfinderHeight) => {
               const edge = Math.min(viewfinderWidth, viewfinderHeight);
-              const ratio = isGate ? 0.72 : 0.72;
-              const size = Math.floor(edge * ratio);
+              const size = Math.floor(edge * (isGate ? 0.8 : 0.72));
               return { width: size, height: size };
             },
             aspectRatio: 1,
-            disableFlip: false,
+            disableFlip: true,
+            experimentalFeatures: {
+              useBarCodeDetectorIfSupported: true,
+            },
           },
           (decoded) => {
             const text = decoded.trim();
