@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { parseCheckInCodeFromScan } from "@/app/lib/attendance-qr";
 import { BatchCombobox } from "@/app/ui/BatchCombobox";
-import { LiveQrScanner } from "@/app/ui/LiveQrScanner";
+import { QrScanner } from "@/app/ui/QrScanner";
 
 type AttendeeResult = {
   id: string;
@@ -292,7 +292,7 @@ export function AttendanceClient({ initialCode, batches, defaultBatchId, isAdmin
             </p>
           ) : null}
           <div className="overflow-hidden rounded-2xl border border-black/10 bg-black dark:border-white/10">
-            <LiveQrScanner
+            <QrScanner
               active={tab === "scan"}
               onScan={handleQrScan}
               onError={() => setMessage("Camera not available. Use phone search instead.")}

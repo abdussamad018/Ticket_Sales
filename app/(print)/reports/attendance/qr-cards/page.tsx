@@ -1,9 +1,8 @@
 import type { AttendeeType } from "@prisma/client";
 import Link from "next/link";
-import QRCode from "qrcode";
-
 import { requireSession } from "@/app/lib/auth";
 import { buildAttendanceQrScanValue } from "@/app/lib/attendance-qr";
+import { qrSvgDataUrl } from "@/app/lib/qr-svg-data-url";
 import { prisma } from "@/app/lib/prisma";
 import { PrintButton } from "@/app/(print)/reports/print/PrintButton";
 import { BatchCombobox } from "@/app/ui/BatchCombobox";
@@ -24,15 +23,6 @@ type CardData = {
   type: AttendeeType;
   qrDataUrl: string;
 };
-
-async function makeQrDataUrl(payload: string) {
-  return QRCode.toDataURL(payload, {
-    width: 160,
-    margin: 2,
-    errorCorrectionLevel: "M",
-    color: { dark: "#000000", light: "#ffffff" },
-  });
-}
 
 export default async function AttendanceQrCardsPage({
   searchParams,
@@ -93,7 +83,7 @@ export default async function AttendanceQrCardsPage({
       continue;
     }
     const payload = buildAttendanceQrScanValue(a.checkInCode);
-    const qrDataUrl = await makeQrDataUrl(payload);
+    const qrDataUrl = qrSvgDataUrl(payload, 160);
     cards.push({
       id: a.id,
       fullName: name,

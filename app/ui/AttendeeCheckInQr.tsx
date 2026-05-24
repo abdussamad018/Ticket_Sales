@@ -1,4 +1,6 @@
-import QRCode from "qrcode";
+"use client";
+
+import { QRCodeSVG } from "qrcode.react";
 
 import { buildAttendanceQrScanValue } from "@/app/lib/attendance-qr";
 
@@ -9,23 +11,19 @@ type Props = {
   size?: number;
 };
 
-export async function AttendeeCheckInQr({ code, batchCode, name, size = 240 }: Props) {
-  const payload = buildAttendanceQrScanValue(code);
-  const dataUrl = await QRCode.toDataURL(payload, {
-    width: size,
-    margin: 3,
-    errorCorrectionLevel: "H",
-    color: { dark: "#000000", light: "#ffffff" },
-  });
+export function AttendeeCheckInQr({ code, batchCode, name, size = 240 }: Props) {
+  const value = buildAttendanceQrScanValue(code);
 
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={dataUrl}
-      alt={`Check-in QR ${code} · Batch ${batchCode} · ${name}`}
-      width={size}
-      height={size}
+    <QRCodeSVG
+      value={value}
+      size={size}
+      level="H"
+      marginSize={3}
+      bgColor="#ffffff"
+      fgColor="#000000"
       className="rounded-lg bg-white"
+      title={`Check-in QR ${code} · Batch ${batchCode} · ${name}`}
     />
   );
 }

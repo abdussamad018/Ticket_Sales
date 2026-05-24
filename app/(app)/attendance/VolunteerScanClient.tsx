@@ -3,7 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 
 import { parseCheckInCodeFromScan } from "@/app/lib/attendance-qr";
-import { LiveQrScanner } from "@/app/ui/LiveQrScanner";
+import { QrScanner } from "@/app/ui/QrScanner";
 
 type AlertKind = "success" | "error" | "neutral";
 
@@ -23,7 +23,6 @@ type CheckInBrief = {
 export function VolunteerScanClient() {
   const [alert, setAlert] = useState<Alert | null>(null);
   const [busy, setBusy] = useState(false);
-  const [cameraReady, setCameraReady] = useState(false);
   const [manualCode, setManualCode] = useState("");
   const lastScannedRef = useRef<string | null>(null);
   const lastScanAtRef = useRef(0);
@@ -131,20 +130,17 @@ export function VolunteerScanClient() {
   return (
     <div className="space-y-4">
       <div className="overflow-hidden rounded-2xl border border-black/10 bg-black dark:border-white/10">
-        <LiveQrScanner
+        <QrScanner
           active
           onScan={handleScan}
-          onReady={() => setCameraReady(true)}
           onError={() => setAlert({ kind: "neutral", title: "Camera not available." })}
         />
       </div>
 
       {busy ? (
         <p className="text-center text-sm text-zinc-500">Processing…</p>
-      ) : cameraReady ? (
-        <p className="text-center text-sm text-zinc-500">Point camera at QR · hold steady 2 seconds</p>
       ) : (
-        <p className="text-center text-sm text-zinc-500">Starting camera…</p>
+        <p className="text-center text-sm text-zinc-500">Point camera at QR · hold steady 2 seconds</p>
       )}
 
       <form
