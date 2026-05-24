@@ -4,6 +4,7 @@ import { Html5Qrcode } from "html5-qrcode";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import { parseCheckInCodeFromScan } from "@/app/lib/attendance-qr";
+import { startQrScannerWithBackCamera } from "@/app/lib/qr-camera";
 
 type AlertKind = "success" | "error" | "neutral";
 
@@ -124,24 +125,18 @@ export function VolunteerScanClient() {
     const scanner = new Html5Qrcode(scanRegionId);
     scannerRef.current = scanner;
 
-    Html5Qrcode.getCameras()
-      .then((cameras) => {
-        if (cancelled || cameras.length === 0) {
-          setAlert({ kind: "neutral", title: "Camera not available." });
-          return;
-        }
-        return scanner.start(
-          cameras[0].id,
-          { fps: 10, qrbox: { width: 260, height: 260 } },
-          (decoded) => {
-            if (busyRef.current) return;
-            void processCode(decoded);
-          },
-          () => {},
-        );
-      })
+    startQrScannerWithBackCamera(
+      scanner,
+      { fps: 10, qrbox: { width: 260, height: 260 } },
+      (decoded) => {
+        if (busyRef.current) return;
+        void processCode(decoded);
+      },
+    )
       .catch(() => {
-        setAlert({ kind: "neutral", title: "Camera not available." });
+        if (!cancelled) {
+          setAlert({ kind: "neutral", title: "Camera not available." });
+        }
       });
 
     return () => {

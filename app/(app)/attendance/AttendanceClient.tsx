@@ -4,6 +4,7 @@ import { Html5Qrcode } from "html5-qrcode";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import { parseCheckInCodeFromScan } from "@/app/lib/attendance-qr";
+import { startQrScannerWithBackCamera } from "@/app/lib/qr-camera";
 import { BatchCombobox } from "@/app/ui/BatchCombobox";
 
 type AttendeeResult = {
@@ -130,25 +131,21 @@ export function AttendanceClient({ initialCode, batches, defaultBatchId, isAdmin
     const scanner = new Html5Qrcode(scanRegionId);
     scannerRef.current = scanner;
 
-    Html5Qrcode.getCameras()
-      .then((cameras) => {
-        if (cancelled || cameras.length === 0) return;
-        return scanner.start(
-          cameras[0].id,
-          { fps: 10, qrbox: { width: 250, height: 250 } },
-          (decoded) => {
-            const code = parseCheckInCodeFromScan(decoded);
-            if (!code) return;
-            setQuery(code);
-            setTab("phone");
-            void runSearch(code);
-          },
-          () => {},
-        );
-      })
-      .catch(() => {
+    startQrScannerWithBackCamera(
+      scanner,
+      { fps: 10, qrbox: { width: 250, height: 250 } },
+      (decoded) => {
+        const code = parseCheckInCodeFromScan(decoded);
+        if (!code) return;
+        setQuery(code);
+        setTab("phone");
+        void runSearch(code);
+      },
+    ).catch(() => {
+      if (!cancelled) {
         setMessage("Camera not available. Use phone search instead.");
-      });
+      }
+    });
 
     return () => {
       cancelled = true;
