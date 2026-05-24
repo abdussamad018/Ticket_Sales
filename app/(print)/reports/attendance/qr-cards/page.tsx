@@ -1,8 +1,9 @@
 import type { AttendeeType } from "@prisma/client";
 import Link from "next/link";
+import { QRCodeSVG } from "qrcode.react";
+
 import { requireSession } from "@/app/lib/auth";
 import { buildAttendanceQrScanValue } from "@/app/lib/attendance-qr";
-import { qrSvgDataUrl } from "@/app/lib/qr-svg-data-url";
 import { prisma } from "@/app/lib/prisma";
 import { PrintButton } from "@/app/(print)/reports/print/PrintButton";
 import { BatchCombobox } from "@/app/ui/BatchCombobox";
@@ -21,7 +22,6 @@ type CardData = {
   batchCode: string;
   checkInCode: string;
   type: AttendeeType;
-  qrDataUrl: string;
 };
 
 export default async function AttendanceQrCardsPage({
@@ -82,15 +82,12 @@ export default async function AttendanceQrCardsPage({
       missingCode.push(name);
       continue;
     }
-    const payload = buildAttendanceQrScanValue(a.checkInCode);
-    const qrDataUrl = qrSvgDataUrl(payload, 160);
     cards.push({
       id: a.id,
       fullName: name,
       batchCode,
       checkInCode: a.checkInCode,
       type: a.type,
-      qrDataUrl,
     });
   }
 
@@ -200,14 +197,15 @@ export default async function AttendanceQrCardsPage({
                     key={card.id}
                     className="flex gap-3 rounded-xl bg-black p-3 text-white print:break-inside-avoid"
                   >
-                    <div className="shrink-0">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={card.qrDataUrl}
-                        alt=""
-                        width={112}
-                        height={112}
-                        className="rounded-md"
+                    <div className="shrink-0 rounded-md bg-white p-1">
+                      <QRCodeSVG
+                        value={buildAttendanceQrScanValue(card.checkInCode)}
+                        size={112}
+                        level="M"
+                        marginSize={1}
+                        bgColor="#ffffff"
+                        fgColor="#000000"
+                        title={`Check-in ${card.checkInCode}`}
                       />
                     </div>
                     <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
