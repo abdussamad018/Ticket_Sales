@@ -1,4 +1,3 @@
-import type { AttendeeType } from "@prisma/client";
 import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
 
@@ -8,20 +7,12 @@ import { prisma } from "@/app/lib/prisma";
 import { PrintButton } from "@/app/(print)/reports/print/PrintButton";
 import { BatchCombobox } from "@/app/ui/BatchCombobox";
 
-const CARDS_PER_PAGE = 6;
-
-function labelType(t: AttendeeType) {
-  if (t === "ADULT") return "Adult";
-  if (t === "CHILD") return "Child";
-  return "Infant";
-}
-
 type CardData = {
   id: string;
   fullName: string;
   batchCode: string;
   checkInCode: string;
-  type: AttendeeType;
+  ticketCode: string;
 };
 
 export default async function AttendanceQrCardsPage({
@@ -64,8 +55,8 @@ export default async function AttendanceQrCardsPage({
           select: {
             id: true,
             fullName: true,
-            type: true,
             checkInCode: true,
+            ticket: { select: { code: true } },
             participant: { select: { batch: { select: { code: true } } } },
           },
           orderBy: [{ fullName: "asc" }],
@@ -87,13 +78,8 @@ export default async function AttendanceQrCardsPage({
       fullName: name,
       batchCode,
       checkInCode: a.checkInCode,
-      type: a.type,
+      ticketCode: a.ticket.code,
     });
-  }
-
-  const pages: CardData[][] = [];
-  for (let i = 0; i < cards.length; i += CARDS_PER_PAGE) {
-    pages.push(cards.slice(i, i + CARDS_PER_PAGE));
   }
 
   const selectedBatch = batchFilterActive
@@ -105,13 +91,31 @@ export default async function AttendanceQrCardsPage({
   const today = new Date();
 
   return (
-    <div className="w-full">
+    <div className="qr-cards-root w-full">
       <style>{`
 @media print {
   .no-print { display: none !important; }
   body { background: white !important; }
-  .qr-page { break-after: page; }
-  .qr-page:last-child { break-after: auto; }
+  .qr-cards-root { padding: 0 !important; margin: 0 !important; }
+  .print-shell { padding: 0 !important; max-width: none !important; }
+  @page { size: landscape; margin: 8mm; }
+  .qr-print-header {
+    margin: 0 0 4mm;
+    font-size: 10pt;
+    font-weight: 600;
+  }
+  .qr-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 3mm;
+    margin-top: 0 !important;
+  }
+  .qr-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    border-radius: 4px;
+    padding: 2.5mm;
+  }
 }
       `}</style>
 
@@ -157,7 +161,7 @@ export default async function AttendanceQrCardsPage({
         </div>
       </div>
 
-      <div className="mt-6 rounded-2xl border border-black/10 bg-white p-4 text-sm">
+      <div className="mt-6 rounded-2xl border border-black/10 bg-white p-4 text-sm no-print">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="font-medium">
             {selectedBatch ? (
@@ -181,54 +185,53 @@ export default async function AttendanceQrCardsPage({
       </div>
 
       {isAdmin && !batchFilterActive ? (
-        <p className="mt-6 text-sm text-zinc-600">Choose a batch above, then Apply to generate QR cards.</p>
+        <p className="mt-6 text-sm text-zinc-600 no-print">Choose a batch above, then Apply to generate QR cards.</p>
       ) : cards.length === 0 && batchFilterActive ? (
-        <p className="mt-6 text-sm text-zinc-600">No attendees with check-in codes in this batch.</p>
+        <p className="mt-6 text-sm text-zinc-600 no-print">No attendees with check-in codes in this batch.</p>
       ) : (
-        <div className="mt-6 space-y-8">
-          {pages.map((pageCards, pageIdx) => (
-            <section key={pageIdx} className="qr-page">
-              <div className="mb-3 text-xs text-zinc-500 no-print">
-                Page {pageIdx + 1} of {pages.length}
-              </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {pageCards.map((card) => (
-                  <article
-                    key={card.id}
-                    className="flex gap-3 rounded-xl bg-black p-3 text-white print:break-inside-avoid"
-                  >
-                    <div className="shrink-0 rounded-md bg-white p-1">
-                      <QRCodeSVG
-                        value={buildAttendanceQrScanValue(card.checkInCode)}
-                        size={112}
-                        level="M"
-                        marginSize={1}
-                        bgColor="#ffffff"
-                        fgColor="#000000"
-                        title={`Check-in ${card.checkInCode}`}
-                      />
-                    </div>
-                    <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
-                      <div className="text-[10px] font-medium uppercase tracking-wide text-white/70">
-                        Batch {card.batchCode} · {labelType(card.type)}
-                      </div>
-                      <div className="text-xs text-white/90">গেট check-in কোড</div>
-                      <div className="font-mono text-lg font-bold leading-tight tracking-wide">
-                        {card.checkInCode}
-                      </div>
-                      <div className="truncate text-sm font-medium text-white" title={card.fullName}>
-                        {card.fullName}
-                      </div>
-                      <div className="text-[11px] leading-snug text-white/80">
-                        ইভেন্টে দিন QR scan বা কোড দেখান
-                      </div>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
+        <>
+          {selectedBatch ? (
+            <div className="qr-print-header hidden print:block">
+              Batch {selectedBatch.code}
+              {selectedBatch.name ? ` · ${selectedBatch.name}` : null} · {cards.length} cards
+            </div>
+          ) : null}
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 qr-grid print:mt-0">
+            {cards.map((card) => (
+              <article
+                key={card.id}
+                className="qr-card flex gap-3 rounded-xl bg-black p-3 text-white"
+              >
+                <div className="shrink-0 rounded-md bg-white p-1">
+                  <QRCodeSVG
+                    value={buildAttendanceQrScanValue(card.checkInCode)}
+                    size={112}
+                    level="M"
+                    marginSize={1}
+                    bgColor="#ffffff"
+                    fgColor="#000000"
+                    title={`Check-in ${card.checkInCode}`}
+                  />
+                </div>
+                <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
+                  <div className="text-[10px] font-medium uppercase tracking-wide text-white/70">
+                    Batch {card.batchCode} · {card.ticketCode}
+                  </div>
+                  <div className="text-xs text-white/90">গেট check-in কোড</div>
+                  <div className="font-mono text-lg font-bold leading-tight tracking-wide">
+                    {card.checkInCode}
+                  </div>
+                  <div className="truncate text-sm font-medium text-white" title={card.fullName}>
+                    {card.fullName}
+                  </div>
+                  <div className="text-[11px] leading-snug text-white/80">
+                    ইভেন্টে দিন QR scan বা কোড দেখান
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
