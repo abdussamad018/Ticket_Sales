@@ -6,24 +6,22 @@ import { parseCheckInCodeFromScan } from "@/app/lib/attendance-qr";
 
 type Props = {
   active?: boolean;
-  /** Gate mode: tall viewport, scan frame, faster scan rate. */
+  /** Gate: compact camera for volunteers. Default: admin scan tab. */
   variant?: "default" | "gate";
   onScan: (text: string) => void;
   onError?: (message: string) => void;
 };
 
-function ScanFrameOverlay() {
+function ScanFrameOverlay({ compact }: { compact?: boolean }) {
+  const size = compact ? "h-[min(48vw,180px)] w-[min(48vw,180px)]" : "h-[min(62vw,280px)] w-[min(62vw,280px)]";
   return (
     <section className="pointer-events-none absolute inset-0 flex items-center justify-center">
-      <section className="relative h-[min(62vw,280px)] w-[min(62vw,280px)]">
-        <span className="absolute left-0 top-0 h-8 w-8 rounded-tl-lg border-l-4 border-t-4 border-emerald-400" />
-        <span className="absolute right-0 top-0 h-8 w-8 rounded-tr-lg border-r-4 border-t-4 border-emerald-400" />
-        <span className="absolute bottom-0 left-0 h-8 w-8 rounded-bl-lg border-b-4 border-l-4 border-emerald-400" />
-        <span className="absolute bottom-0 right-0 h-8 w-8 rounded-br-lg border-b-4 border-r-4 border-emerald-400" />
+      <section className={`relative ${size}`}>
+        <span className="absolute left-0 top-0 h-6 w-6 rounded-tl-md border-l-[3px] border-t-[3px] border-emerald-400" />
+        <span className="absolute right-0 top-0 h-6 w-6 rounded-tr-md border-r-[3px] border-t-[3px] border-emerald-400" />
+        <span className="absolute bottom-0 left-0 h-6 w-6 rounded-bl-md border-b-[3px] border-l-[3px] border-emerald-400" />
+        <span className="absolute bottom-0 right-0 h-6 w-6 rounded-br-md border-b-[3px] border-r-[3px] border-emerald-400" />
       </section>
-      <p className="absolute bottom-4 left-0 right-0 text-center text-xs font-medium text-white/90">
-        Align QR inside the frame
-      </p>
     </section>
   );
 }
@@ -45,7 +43,7 @@ export function QrScanner({ active = true, variant = "default", onScan, onError 
   onErrorRef.current = onError;
 
   const isGate = variant === "gate";
-  const minHeight = isGate ? "min(75vh, 520px)" : "min(70vw, 320px)";
+  const minHeight = isGate ? "220px" : "min(70vw, 320px)";
   const dedupeMs = isGate ? 900 : 2000;
 
   useEffect(() => {
@@ -81,7 +79,8 @@ export function QrScanner({ active = true, variant = "default", onScan, onError 
             fps: isGate ? 20 : 10,
             qrbox: (viewfinderWidth, viewfinderHeight) => {
               const edge = Math.min(viewfinderWidth, viewfinderHeight);
-              const size = Math.floor(edge * (isGate ? 0.78 : 0.72));
+              const ratio = isGate ? 0.72 : 0.72;
+              const size = Math.floor(edge * ratio);
               return { width: size, height: size };
             },
             aspectRatio: 1,
@@ -130,10 +129,10 @@ export function QrScanner({ active = true, variant = "default", onScan, onError 
   return (
     <section
       className="relative w-full overflow-hidden bg-black [&_video]:object-cover"
-      style={{ minHeight }}
+      style={{ minHeight, maxHeight: isGate ? "220px" : undefined }}
     >
-      <section id={regionId} className="h-full w-full" style={{ minHeight }} />
-      {isGate ? <ScanFrameOverlay /> : null}
+      <section id={regionId} className="h-full w-full" style={{ minHeight, maxHeight: isGate ? "220px" : undefined }} />
+      {isGate ? <ScanFrameOverlay compact /> : null}
     </section>
   );
 }
