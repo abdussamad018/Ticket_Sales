@@ -16,11 +16,13 @@ export default async function AttendancePage({
   if (volunteer) {
     return (
       <div className="mx-auto w-full max-w-lg px-0 py-0">
-        <div className="space-y-1 text-center sm:text-left">
-          <h1 className="text-2xl font-semibold tracking-tight">Gate check-in</h1>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">Scan attendee QR code to check in.</p>
+        <div className="space-y-1 text-center">
+          <h1 className="text-xl font-semibold tracking-tight">Gate check-in</h1>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            Scan any attendee QR — all batches, no search needed.
+          </p>
         </div>
-        <div className="mt-6">
+        <div className="mt-4">
           <VolunteerScanClient />
         </div>
       </div>

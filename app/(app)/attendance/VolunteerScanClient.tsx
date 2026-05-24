@@ -1,9 +1,7 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
-
-import { parseCheckInCodeFromScan } from "@/app/lib/attendance-qr";
-import { QrScanner } from "@/app/ui/QrScanner";
+import { Html5Qrcode } from "html5-qrcode";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 type AlertKind = "success" | "error" | "neutral";
 
@@ -13,160 +11,178 @@ type Alert = {
   detail?: string;
 };
 
-type CheckInBrief = {
-  id: string;
-  fullName: string | null;
-  batchCode: string;
-  checkedInAt: string | null;
+type ScanResponse = {
+  status?: string;
+  message?: string;
+  detail?: string;
+  error?: string;
 };
 
+function pickRearCameraId(cameras: { id: string; label: string }[]) {
+  if (cameras.length === 0) return null;
+  const back = cameras.find((c) => /back|rear|environment|traseira|arrière/i.test(c.label));
+  return (back ?? cameras[cameras.length - 1]).id;
+}
+
 export function VolunteerScanClient() {
+  const scanRegionId = useId().replace(/:/g, "");
   const [alert, setAlert] = useState<Alert | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [manualCode, setManualCode] = useState("");
-  const lastScannedRef = useRef<string | null>(null);
-  const lastScanAtRef = useRef(0);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
   const busyRef = useRef(false);
-  busyRef.current = busy;
+  const lastCodeRef = useRef<string | null>(null);
+  const lastAtRef = useRef(0);
+  const alertTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const processCode = useCallback(async (raw: string) => {
-    const trimmed = raw.trim();
-    if (!trimmed) return;
-
-    const code = parseCheckInCodeFromScan(trimmed);
-    const debounceKey = code ?? trimmed;
-
-    const now = Date.now();
-    if (lastScannedRef.current === debounceKey && now - lastScanAtRef.current < 2500) {
-      return;
-    }
-    lastScannedRef.current = debounceKey;
-    lastScanAtRef.current = now;
-
-    setBusy(true);
-    setAlert(null);
-
-    try {
-      const searchRes = await fetch(`/api/attendance/search?q=${encodeURIComponent(trimmed)}`);
-      const searchData = (await searchRes.json()) as {
-        attendees?: { id: string; fullName: string | null; checkedInAt: string | null; participant: { batch: { code: string } } }[];
-        error?: string;
-      };
-
-      if (!searchRes.ok || !searchData.attendees?.length) {
-        setAlert({
-          kind: "neutral",
-          title: code ? "No attendee found for this QR." : "Invalid QR code.",
-        });
-        return;
-      }
-
-      const attendee = searchData.attendees[0];
-      const name = attendee.fullName?.trim() || "Attendee";
-      const batch = attendee.participant.batch.code;
-
-      if (attendee.checkedInAt) {
-        setAlert({
-          kind: "error",
-          title: "Already checked in",
-          detail: `${name} · Batch ${batch}`,
-        });
-        return;
-      }
-
-      const checkRes = await fetch("/api/attendance/check-in", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ attendeeIds: [attendee.id] }),
-      });
-      const checkData = (await checkRes.json()) as {
-        status?: string;
-        updated?: number;
-        attendees?: CheckInBrief[];
-        error?: string;
-      };
-
-      if (!checkRes.ok) {
-        setAlert({ kind: "neutral", title: checkData.error ?? "Check-in failed." });
-        return;
-      }
-
-      if (checkData.status === "already_checked_in" || checkData.updated === 0) {
-        const brief = checkData.attendees?.[0];
-        setAlert({
-          kind: "error",
-          title: "Already checked in",
-          detail: brief
-            ? `${brief.fullName?.trim() || name} · Batch ${brief.batchCode}`
-            : `${name} · Batch ${batch}`,
-        });
-        return;
-      }
-
-      const brief = checkData.attendees?.[0];
-      setAlert({
-        kind: "success",
-        title: "Check-in successful",
-        detail: brief
-          ? `${brief.fullName?.trim() || name} · Batch ${brief.batchCode}`
-          : `${name} · Batch ${batch}`,
-      });
-      setManualCode("");
-    } catch {
-      setAlert({ kind: "neutral", title: "Something went wrong. Try again." });
-    } finally {
-      setBusy(false);
-    }
+  const showAlert = useCallback((next: Alert) => {
+    setAlert(next);
+    if (alertTimerRef.current) clearTimeout(alertTimerRef.current);
+    alertTimerRef.current = setTimeout(() => setAlert(null), 4000);
   }, []);
 
-  const handleScan = useCallback(
-    (decoded: string) => {
-      if (busyRef.current) return;
-      void processCode(decoded);
+  const processScan = useCallback(
+    async (raw: string) => {
+      const trimmed = raw.trim();
+      if (!trimmed || busyRef.current) return;
+
+      const now = Date.now();
+      if (lastCodeRef.current === trimmed && now - lastAtRef.current < 3000) return;
+      lastCodeRef.current = trimmed;
+      lastAtRef.current = now;
+
+      busyRef.current = true;
+      try {
+        const res = await fetch("/api/attendance/volunteer-scan", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ scan: trimmed }),
+        });
+
+        let data: ScanResponse = {};
+        try {
+          data = (await res.json()) as ScanResponse;
+        } catch {
+          showAlert({ kind: "neutral", title: "Server error. Try again." });
+          return;
+        }
+
+        if (!res.ok) {
+          showAlert({ kind: "neutral", title: data.error ?? "Check-in failed." });
+          return;
+        }
+
+        if (data.status === "checked_in") {
+          showAlert({
+            kind: "success",
+            title: data.message ?? "Check-in successful",
+            detail: data.detail,
+          });
+          return;
+        }
+
+        if (data.status === "already_checked_in") {
+          showAlert({
+            kind: "error",
+            title: data.message ?? "Already checked in",
+            detail: data.detail,
+          });
+          return;
+        }
+
+        showAlert({
+          kind: "neutral",
+          title: data.message ?? "Could not check in.",
+        });
+      } catch {
+        showAlert({ kind: "neutral", title: "Network error. Try again." });
+      } finally {
+        busyRef.current = false;
+      }
     },
-    [processCode],
+    [showAlert],
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    const scanner = new Html5Qrcode(scanRegionId, { verbose: false });
+    scannerRef.current = scanner;
+
+    async function startScanner() {
+      try {
+        const cameras = await Html5Qrcode.getCameras();
+        if (cancelled) return;
+
+        if (cameras.length === 0) {
+          setCameraError("No camera found. Allow camera permission and reload.");
+          return;
+        }
+
+        const cameraId = pickRearCameraId(cameras);
+        const config = {
+          fps: 10,
+          qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+            const size = Math.min(viewfinderWidth, viewfinderHeight, 280) * 0.85;
+            return { width: size, height: size };
+          },
+          aspectRatio: 1,
+        };
+
+        await scanner.start(
+          cameraId ?? { facingMode: "environment" },
+          config,
+          (decoded) => {
+            void processScan(decoded);
+          },
+          () => {},
+        );
+
+        if (!cancelled) {
+          setReady(true);
+          setCameraError(null);
+        }
+      } catch {
+        if (!cancelled) {
+          setCameraError(
+            "Camera not available. Use HTTPS, allow camera permission, then reload this page.",
+          );
+        }
+      }
+    }
+
+    void startScanner();
+
+    return () => {
+      cancelled = true;
+      if (alertTimerRef.current) clearTimeout(alertTimerRef.current);
+      if (scannerRef.current) {
+        void scannerRef.current.stop().catch(() => {});
+        scannerRef.current.clear();
+        scannerRef.current = null;
+      }
+    };
+  }, [scanRegionId, processScan]);
 
   return (
     <div className="space-y-4">
       <div className="overflow-hidden rounded-2xl border border-black/10 bg-black dark:border-white/10">
-        <QrScanner
-          active
-          onScan={handleScan}
-          onError={() => setAlert({ kind: "neutral", title: "Camera not available." })}
-        />
+        <div id={scanRegionId} className="min-h-[min(70vh,420px)] w-full [&>video]:object-cover" />
       </div>
 
-      {busy ? (
-        <p className="text-center text-sm text-zinc-500">Processing…</p>
-      ) : (
-        <p className="text-center text-sm text-zinc-500">Point camera at QR · hold steady 2 seconds</p>
-      )}
-
-      <form
-        className="flex flex-col gap-2 sm:flex-row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void processCode(manualCode);
-        }}
-      >
-        <input
-          type="text"
-          value={manualCode}
-          onChange={(e) => setManualCode(e.target.value.toUpperCase().replace(/\s/g, ""))}
-          placeholder="Or type check-in code (e.g. 3X9WU48R)"
-          autoComplete="off"
-          spellCheck={false}
-          className="h-12 flex-1 rounded-xl border border-black/15 bg-white px-4 font-mono text-base tracking-wide outline-none focus:ring-2 focus:ring-black/20 dark:border-white/15 dark:bg-zinc-950"
-        />
-        <button
-          type="submit"
-          disabled={busy || manualCode.trim().length < 6}
-          className="h-12 shrink-0 rounded-xl bg-black px-5 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-black"
+      {cameraError ? (
+        <div
+          role="alert"
+          className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-4 text-amber-950 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-100"
         >
-          Check in
-        </button>
-      </form>
+          <div className="font-semibold">Camera problem</div>
+          <p className="mt-1 text-sm">{cameraError}</p>
+        </div>
+      ) : ready ? (
+        <p className="text-center text-sm text-zinc-500">Point camera at attendee QR code</p>
+      ) : (
+        <p className="text-center text-sm text-zinc-500">Starting camera…</p>
+      )}
 
       {alert ? (
         <div
@@ -179,7 +195,7 @@ export function VolunteerScanClient() {
                 : "border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100"
           }`}
         >
-          <div className="text-base font-semibold">{alert.title}</div>
+          <div className="text-lg font-semibold">{alert.title}</div>
           {alert.detail ? <div className="mt-1 text-sm opacity-90">{alert.detail}</div> : null}
         </div>
       ) : null}
