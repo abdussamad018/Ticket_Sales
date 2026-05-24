@@ -84,9 +84,6 @@ export function QrScanner({ active = true, variant = "default", onScan, onError 
             },
             aspectRatio: 1,
             disableFlip: true,
-            experimentalFeatures: {
-              useBarCodeDetectorIfSupported: true,
-            },
           },
           (decoded) => {
             const text = decoded.trim();
