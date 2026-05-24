@@ -2,7 +2,6 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  transpilePackages: ["react-qr-scanner"],
   // Prisma 7 loads WASM from node_modules/.prisma; keeping these external avoids
   // Turbopack/Windows file-lock races (EBUSY on query_compiler_fast_bg.wasm-base64.js).
   serverExternalPackages: ["@prisma/client", "prisma", "@prisma/adapter-pg", "pg"],

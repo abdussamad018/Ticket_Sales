@@ -203,11 +203,11 @@ export default async function AttendanceQrCardsPage({
                 className="qr-card flex gap-3 rounded-xl bg-black p-3 text-white"
               >
                 <div className="shrink-0 rounded-md bg-white p-1">
-                  <QRCodeSVG
-                    value={buildAttendanceQrScanValue(card.checkInCode)}
-                    size={112}
-                    level="M"
-                    marginSize={1}
+                      <QRCodeSVG
+                        value={buildAttendanceQrScanValue(card.checkInCode)}
+                        size={128}
+                        level="H"
+                        marginSize={2}
                     bgColor="#ffffff"
                     fgColor="#000000"
                     title={`Check-in ${card.checkInCode}`}

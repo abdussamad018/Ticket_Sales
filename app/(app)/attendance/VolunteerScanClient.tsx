@@ -30,6 +30,7 @@ export function VolunteerScanClient() {
   const [alert, setAlert] = useState<Alert | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [scanCount, setScanCount] = useState(0);
+  const [lastRaw, setLastRaw] = useState<string | null>(null);
   const busyRef = useRef(false);
   const lastCodeRef = useRef<string | null>(null);
   const lastAtRef = useRef(0);
@@ -48,8 +49,13 @@ export function VolunteerScanClient() {
       const trimmed = raw.trim();
       if (!trimmed || busyRef.current) return;
 
+      setLastRaw(trimmed.slice(0, 40));
+
       const code = parseCheckInCodeFromScan(trimmed);
-      if (!code) return;
+      if (!code) {
+        showAlert({ kind: "neutral", title: "Unreadable QR", detail: "Try again or move closer." });
+        return;
+      }
 
       const now = Date.now();
       if (lastCodeRef.current === code && now - lastAtRef.current < 1200) return;
@@ -70,6 +76,15 @@ export function VolunteerScanClient() {
           data = (await res.json()) as ScanResponse;
         } catch {
           showAlert({ kind: "neutral", title: "Server error. Try again." });
+          return;
+        }
+
+        if (res.status === 403) {
+          showAlert({
+            kind: "neutral",
+            title: "Not authorized",
+            detail: "Log out and sign in again as a volunteer account.",
+          });
           return;
         }
 
@@ -100,6 +115,7 @@ export function VolunteerScanClient() {
         showAlert({
           kind: "neutral",
           title: data.message ?? "Could not check in.",
+          detail: data.status === "not_found" ? `Code ${code} not in database.` : undefined,
         });
       } catch {
         showAlert({ kind: "neutral", title: "Network error. Try again." });
@@ -133,18 +149,23 @@ export function VolunteerScanClient() {
         />
       </section>
 
-      <section className="flex items-center justify-between gap-2 px-1 text-xs text-zinc-500">
-        <span>{cameraError ? "Camera error" : "Ready to scan"}</span>
-        <span className="tabular-nums">Checked in this session: {scanCount}</span>
+      <section className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-zinc-500">
+        <span>{cameraError ? "Camera error" : "Scanner active — point at QR"}</span>
+        <span className="tabular-nums">Checked in: {scanCount}</span>
       </section>
+
+      {lastRaw && process.env.NODE_ENV === "development" ? (
+        <p className="break-all px-1 font-mono text-[10px] text-zinc-400">Last read: {lastRaw}</p>
+      ) : null}
 
       {cameraError ? (
         <section
           role="alert"
-          className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-4 text-amber-950 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-100"
+          className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-4 text-amber-950"
         >
           <p className="font-semibold">Camera problem</p>
           <p className="mt-1 text-sm">{cameraError}</p>
+          <p className="mt-2 text-xs">Tip: use Chrome/Safari, HTTPS, and allow camera for this site.</p>
         </section>
       ) : null}
 
@@ -154,10 +175,10 @@ export function VolunteerScanClient() {
           aria-live="assertive"
           className={`rounded-2xl border px-4 py-5 ${
             alert.kind === "success"
-              ? "border-emerald-400 bg-emerald-50 text-emerald-950 dark:border-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-100"
+              ? "border-emerald-400 bg-emerald-50 text-emerald-950"
               : alert.kind === "error"
-                ? "border-red-400 bg-red-50 text-red-950 dark:border-red-700 dark:bg-red-950/50 dark:text-red-100"
-                : "border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100"
+                ? "border-red-400 bg-red-50 text-red-950"
+                : "border-amber-200 bg-amber-50 text-amber-950"
           }`}
         >
           <p className="text-xl font-bold">{alert.title}</p>
