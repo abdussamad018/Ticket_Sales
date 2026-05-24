@@ -6,6 +6,11 @@ export type AttendanceQrPayload = {
   name: string;
 };
 
+/** Plain check-in code for QR images — scans reliably on phone screens. */
+export function buildAttendanceQrScanValue(code: string): string {
+  return code.trim().toUpperCase().replace(/\s/g, "");
+}
+
 export function buildAttendanceQrPayload(input: {
   code: string;
   batch: string;

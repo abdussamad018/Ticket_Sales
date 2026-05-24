@@ -1,10 +1,13 @@
 "use client";
 
-import { Html5Qrcode } from "html5-qrcode";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import { parseCheckInCodeFromScan } from "@/app/lib/attendance-qr";
-import { startQrScannerWithBackCamera } from "@/app/lib/qr-camera";
+import {
+  createQrScanner,
+  QR_SCAN_CONFIG,
+  startQrScannerWithBackCamera,
+} from "@/app/lib/qr-camera";
 
 type AlertKind = "success" | "error" | "neutral";
 
@@ -25,31 +28,32 @@ export function VolunteerScanClient() {
   const scanRegionId = useId().replace(/:/g, "");
   const [alert, setAlert] = useState<Alert | null>(null);
   const [busy, setBusy] = useState(false);
-  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const [cameraReady, setCameraReady] = useState(false);
+  const scannerRef = useRef<ReturnType<typeof createQrScanner> | null>(null);
   const lastScannedRef = useRef<string | null>(null);
   const lastScanAtRef = useRef(0);
   const busyRef = useRef(false);
   busyRef.current = busy;
 
   const processCode = useCallback(async (raw: string) => {
-    const code = parseCheckInCodeFromScan(raw);
-    if (!code) {
-      setAlert({ kind: "neutral", title: "Invalid QR code." });
-      return;
-    }
+    const trimmed = raw.trim();
+    if (!trimmed) return;
+
+    const code = parseCheckInCodeFromScan(trimmed);
+    const debounceKey = code ?? trimmed;
 
     const now = Date.now();
-    if (lastScannedRef.current === code && now - lastScanAtRef.current < 2500) {
+    if (lastScannedRef.current === debounceKey && now - lastScanAtRef.current < 2500) {
       return;
     }
-    lastScannedRef.current = code;
+    lastScannedRef.current = debounceKey;
     lastScanAtRef.current = now;
 
     setBusy(true);
     setAlert(null);
 
     try {
-      const searchRes = await fetch(`/api/attendance/search?q=${encodeURIComponent(code)}`);
+      const searchRes = await fetch(`/api/attendance/search?q=${encodeURIComponent(trimmed)}`);
       const searchData = (await searchRes.json()) as {
         attendees?: { id: string; fullName: string | null; checkedInAt: string | null; participant: { batch: { code: string } } }[];
         error?: string;
@@ -58,7 +62,7 @@ export function VolunteerScanClient() {
       if (!searchRes.ok || !searchData.attendees?.length) {
         setAlert({
           kind: "neutral",
-          title: searchData.error ?? "No attendee found for this QR.",
+          title: code ? "No attendee found for this QR." : "Invalid QR code.",
         });
         return;
       }
@@ -122,25 +126,33 @@ export function VolunteerScanClient() {
 
   useEffect(() => {
     let cancelled = false;
-    const scanner = new Html5Qrcode(scanRegionId);
+    const scanner = createQrScanner(scanRegionId);
     scannerRef.current = scanner;
 
-    startQrScannerWithBackCamera(
-      scanner,
-      { fps: 10, qrbox: { width: 260, height: 260 } },
-      (decoded) => {
-        if (busyRef.current) return;
-        void processCode(decoded);
-      },
-    )
-      .catch(() => {
-        if (!cancelled) {
-          setAlert({ kind: "neutral", title: "Camera not available." });
-        }
-      });
+    const startTimer = window.setTimeout(() => {
+      if (cancelled) return;
+
+      startQrScannerWithBackCamera(
+        scanner,
+        QR_SCAN_CONFIG,
+        (decoded) => {
+          if (busyRef.current) return;
+          void processCode(decoded);
+        },
+      )
+        .then(() => {
+          if (!cancelled) setCameraReady(true);
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setAlert({ kind: "neutral", title: "Camera not available." });
+          }
+        });
+    }, 150);
 
     return () => {
       cancelled = true;
+      window.clearTimeout(startTimer);
       if (scannerRef.current) {
         void scannerRef.current.stop().catch(() => {});
         scannerRef.current.clear();
@@ -152,13 +164,15 @@ export function VolunteerScanClient() {
   return (
     <div className="space-y-4">
       <div className="overflow-hidden rounded-2xl border border-black/10 bg-black dark:border-white/10">
-        <div id={scanRegionId} className="w-full min-h-[280px]" />
+        <div id={scanRegionId} className="min-h-[min(70vw,320px)] w-full [&_video]:!object-cover" />
       </div>
 
       {busy ? (
         <p className="text-center text-sm text-zinc-500">Processing…</p>
-      ) : (
+      ) : cameraReady ? (
         <p className="text-center text-sm text-zinc-500">Point camera at attendee QR code</p>
+      ) : (
+        <p className="text-center text-sm text-zinc-500">Starting camera…</p>
       )}
 
       {alert ? (

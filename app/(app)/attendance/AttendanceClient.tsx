@@ -1,10 +1,13 @@
 "use client";
 
-import { Html5Qrcode } from "html5-qrcode";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import { parseCheckInCodeFromScan } from "@/app/lib/attendance-qr";
-import { startQrScannerWithBackCamera } from "@/app/lib/qr-camera";
+import {
+  createQrScanner,
+  QR_SCAN_CONFIG,
+  startQrScannerWithBackCamera,
+} from "@/app/lib/qr-camera";
 import { BatchCombobox } from "@/app/ui/BatchCombobox";
 
 type AttendeeResult = {
@@ -49,7 +52,7 @@ export function AttendanceClient({ initialCode, batches, defaultBatchId, isAdmin
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const scannerRef = useRef<ReturnType<typeof createQrScanner> | null>(null);
   const initialSearchDone = useRef(false);
 
   const buildSearchUrl = useCallback(
@@ -128,27 +131,28 @@ export function AttendanceClient({ initialCode, batches, defaultBatchId, isAdmin
     }
 
     let cancelled = false;
-    const scanner = new Html5Qrcode(scanRegionId);
+    const scanner = createQrScanner(scanRegionId);
     scannerRef.current = scanner;
 
-    startQrScannerWithBackCamera(
-      scanner,
-      { fps: 10, qrbox: { width: 250, height: 250 } },
-      (decoded) => {
+    const startTimer = window.setTimeout(() => {
+      if (cancelled) return;
+
+      startQrScannerWithBackCamera(scanner, QR_SCAN_CONFIG, (decoded) => {
         const code = parseCheckInCodeFromScan(decoded);
         if (!code) return;
         setQuery(code);
         setTab("phone");
         void runSearch(code);
-      },
-    ).catch(() => {
-      if (!cancelled) {
-        setMessage("Camera not available. Use phone search instead.");
-      }
-    });
+      }).catch(() => {
+        if (!cancelled) {
+          setMessage("Camera not available. Use phone search instead.");
+        }
+      });
+    }, 150);
 
     return () => {
       cancelled = true;
+      window.clearTimeout(startTimer);
       if (scannerRef.current) {
         void scannerRef.current.stop().catch(() => {});
         scannerRef.current.clear();

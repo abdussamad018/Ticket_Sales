@@ -3,7 +3,7 @@ import Link from "next/link";
 import QRCode from "qrcode";
 
 import { requireSession } from "@/app/lib/auth";
-import { buildAttendanceQrPayload } from "@/app/lib/attendance-qr";
+import { buildAttendanceQrScanValue } from "@/app/lib/attendance-qr";
 import { prisma } from "@/app/lib/prisma";
 import { PrintButton } from "@/app/(print)/reports/print/PrintButton";
 import { BatchCombobox } from "@/app/ui/BatchCombobox";
@@ -27,8 +27,9 @@ type CardData = {
 
 async function makeQrDataUrl(payload: string) {
   return QRCode.toDataURL(payload, {
-    width: 140,
-    margin: 1,
+    width: 160,
+    margin: 2,
+    errorCorrectionLevel: "M",
     color: { dark: "#ffffff", light: "#000000" },
   });
 }
@@ -91,11 +92,7 @@ export default async function AttendanceQrCardsPage({
       missingCode.push(name);
       continue;
     }
-    const payload = buildAttendanceQrPayload({
-      code: a.checkInCode,
-      batch: batchCode,
-      name,
-    });
+    const payload = buildAttendanceQrScanValue(a.checkInCode);
     const qrDataUrl = await makeQrDataUrl(payload);
     cards.push({
       id: a.id,
