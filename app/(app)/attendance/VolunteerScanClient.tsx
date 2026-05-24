@@ -1,13 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import { parseCheckInCodeFromScan } from "@/app/lib/attendance-qr";
-import {
-  createQrScanner,
-  QR_SCAN_CONFIG,
-  startQrScannerWithBackCamera,
-} from "@/app/lib/qr-camera";
+import { LiveQrScanner } from "@/app/ui/LiveQrScanner";
 
 type AlertKind = "success" | "error" | "neutral";
 
@@ -25,11 +21,10 @@ type CheckInBrief = {
 };
 
 export function VolunteerScanClient() {
-  const scanRegionId = useId().replace(/:/g, "");
   const [alert, setAlert] = useState<Alert | null>(null);
   const [busy, setBusy] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
-  const scannerRef = useRef<ReturnType<typeof createQrScanner> | null>(null);
+  const [manualCode, setManualCode] = useState("");
   const lastScannedRef = useRef<string | null>(null);
   const lastScanAtRef = useRef(0);
   const busyRef = useRef(false);
@@ -117,6 +112,7 @@ export function VolunteerScanClient() {
           ? `${brief.fullName?.trim() || name} · Batch ${brief.batchCode}`
           : `${name} · Batch ${batch}`,
       });
+      setManualCode("");
     } catch {
       setAlert({ kind: "neutral", title: "Something went wrong. Try again." });
     } finally {
@@ -124,70 +120,57 @@ export function VolunteerScanClient() {
     }
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    let stopScan: (() => void) | undefined;
-    const scanner = createQrScanner(scanRegionId);
-    scannerRef.current = scanner;
-
-    const onDecoded = (decoded: string) => {
+  const handleScan = useCallback(
+    (decoded: string) => {
       if (busyRef.current) return;
-      try {
-        scanner.pause(true);
-      } catch {
-        /* ignore */
-      }
-      void processCode(decoded).finally(() => {
-        try {
-          scanner.resume();
-        } catch {
-          /* ignore */
-        }
-      });
-    };
-
-    const startTimer = window.setTimeout(() => {
-      if (cancelled) return;
-
-      startQrScannerWithBackCamera(scanner, scanRegionId, QR_SCAN_CONFIG, onDecoded)
-        .then((cleanup) => {
-          if (cancelled) {
-            cleanup();
-            return;
-          }
-          stopScan = cleanup;
-          setCameraReady(true);
-        })
-        .catch(() => {
-          if (!cancelled) {
-            setAlert({ kind: "neutral", title: "Camera not available." });
-          }
-        });
-    }, 200);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(startTimer);
-      stopScan?.();
-      scannerRef.current = null;
-    };
-  }, [scanRegionId, processCode]);
+      void processCode(decoded);
+    },
+    [processCode],
+  );
 
   return (
     <div className="space-y-4">
       <div className="overflow-hidden rounded-2xl border border-black/10 bg-black dark:border-white/10">
-        <div id={scanRegionId} className="min-h-[min(70vw,320px)] w-full [&_video]:!object-cover" />
+        <LiveQrScanner
+          active
+          onScan={handleScan}
+          onReady={() => setCameraReady(true)}
+          onError={() => setAlert({ kind: "neutral", title: "Camera not available." })}
+        />
       </div>
 
       {busy ? (
         <p className="text-center text-sm text-zinc-500">Processing…</p>
       ) : cameraReady ? (
-        <p className="text-center text-sm text-zinc-500">
-          Point camera at QR · hold steady · lower screen brightness if needed
-        </p>
+        <p className="text-center text-sm text-zinc-500">Point camera at QR · hold steady 2 seconds</p>
       ) : (
         <p className="text-center text-sm text-zinc-500">Starting camera…</p>
       )}
+
+      <form
+        className="flex flex-col gap-2 sm:flex-row"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void processCode(manualCode);
+        }}
+      >
+        <input
+          type="text"
+          value={manualCode}
+          onChange={(e) => setManualCode(e.target.value.toUpperCase().replace(/\s/g, ""))}
+          placeholder="Or type check-in code (e.g. 3X9WU48R)"
+          autoComplete="off"
+          spellCheck={false}
+          className="h-12 flex-1 rounded-xl border border-black/15 bg-white px-4 font-mono text-base tracking-wide outline-none focus:ring-2 focus:ring-black/20 dark:border-white/15 dark:bg-zinc-950"
+        />
+        <button
+          type="submit"
+          disabled={busy || manualCode.trim().length < 6}
+          className="h-12 shrink-0 rounded-xl bg-black px-5 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-black"
+        >
+          Check in
+        </button>
+      </form>
 
       {alert ? (
         <div

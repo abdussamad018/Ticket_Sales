@@ -1,14 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { parseCheckInCodeFromScan } from "@/app/lib/attendance-qr";
-import {
-  createQrScanner,
-  QR_SCAN_CONFIG,
-  startQrScannerWithBackCamera,
-} from "@/app/lib/qr-camera";
 import { BatchCombobox } from "@/app/ui/BatchCombobox";
+import { LiveQrScanner } from "@/app/ui/LiveQrScanner";
 
 type AttendeeResult = {
   id: string;
@@ -43,7 +39,6 @@ type Props = {
 };
 
 export function AttendanceClient({ initialCode, batches, defaultBatchId, isAdmin }: Props) {
-  const scanRegionId = useId().replace(/:/g, "");
   const [tab, setTab] = useState<"phone" | "scan">("phone");
   const [query, setQuery] = useState(initialCode ?? "");
   const [batchId, setBatchId] = useState(defaultBatchId ?? "");
@@ -52,8 +47,9 @@ export function AttendanceClient({ initialCode, batches, defaultBatchId, isAdmin
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const scannerRef = useRef<ReturnType<typeof createQrScanner> | null>(null);
   const initialSearchDone = useRef(false);
+  const lastScannedRef = useRef<string | null>(null);
+  const lastScanAtRef = useRef(0);
 
   const buildSearchUrl = useCallback(
     (q: string) => {
@@ -120,61 +116,32 @@ export function AttendanceClient({ initialCode, batches, defaultBatchId, isAdmin
     }
   }, [initialCode, batchId, runSearch]);
 
-  useEffect(() => {
-    if (tab !== "scan") {
-      if (scannerRef.current) {
-        void scannerRef.current.stop().catch(() => {});
-        scannerRef.current.clear();
-        scannerRef.current = null;
-      }
-      return;
-    }
-
-    let cancelled = false;
-    let stopScan: (() => void) | undefined;
-    const scanner = createQrScanner(scanRegionId);
-    scannerRef.current = scanner;
-
-    const startTimer = window.setTimeout(() => {
-      if (cancelled) return;
+  const handleQrScan = useCallback(
+    (decoded: string) => {
+      const trimmed = decoded.trim();
+      if (!trimmed) return;
 
       if (!batchId) {
         setMessage("Select a batch first, then scan.");
         return;
       }
 
-      startQrScannerWithBackCamera(scanner, scanRegionId, QR_SCAN_CONFIG, (decoded) => {
-        const trimmed = decoded.trim();
-        if (!trimmed) return;
+      const code = parseCheckInCodeFromScan(trimmed);
+      const debounceKey = code ?? trimmed;
+      const now = Date.now();
+      if (lastScannedRef.current === debounceKey && now - lastScanAtRef.current < 2000) {
+        return;
+      }
+      lastScannedRef.current = debounceKey;
+      lastScanAtRef.current = now;
 
-        const code = parseCheckInCodeFromScan(trimmed);
-        const searchValue = code ?? trimmed;
-
-        setQuery(searchValue);
-        setMessage(code ? `Scanned ${code}` : "QR read — searching…");
-        void runSearch(searchValue);
-      })
-        .then((cleanup) => {
-          if (cancelled) {
-            cleanup();
-            return;
-          }
-          stopScan = cleanup;
-        })
-        .catch(() => {
-          if (!cancelled) {
-            setMessage("Camera not available. Use phone search instead.");
-          }
-        });
-    }, 200);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(startTimer);
-      stopScan?.();
-      scannerRef.current = null;
-    };
-  }, [tab, scanRegionId, runSearch, batchId]);
+      const searchValue = code ?? trimmed;
+      setQuery(searchValue);
+      setMessage(code ? `Scanned ${code}` : "QR read — searching…");
+      void runSearch(searchValue);
+    },
+    [batchId, runSearch],
+  );
 
   async function checkIn(ids: string[]) {
     setBusyId(ids.join(","));
@@ -325,7 +292,11 @@ export function AttendanceClient({ initialCode, batches, defaultBatchId, isAdmin
             </p>
           ) : null}
           <div className="overflow-hidden rounded-2xl border border-black/10 bg-black dark:border-white/10">
-            <div id={scanRegionId} className="min-h-[min(70vw,320px)] w-full [&_video]:!object-cover" />
+            <LiveQrScanner
+              active={tab === "scan"}
+              onScan={handleQrScan}
+              onError={() => setMessage("Camera not available. Use phone search instead.")}
+            />
           </div>
           <p className="text-center text-xs text-zinc-500">
             Hold steady · fill the screen with the QR · lower brightness if glare
