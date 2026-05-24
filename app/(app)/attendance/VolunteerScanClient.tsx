@@ -126,38 +126,50 @@ export function VolunteerScanClient() {
 
   useEffect(() => {
     let cancelled = false;
+    let stopScan: (() => void) | undefined;
     const scanner = createQrScanner(scanRegionId);
     scannerRef.current = scanner;
+
+    const onDecoded = (decoded: string) => {
+      if (busyRef.current) return;
+      try {
+        scanner.pause(true);
+      } catch {
+        /* ignore */
+      }
+      void processCode(decoded).finally(() => {
+        try {
+          scanner.resume();
+        } catch {
+          /* ignore */
+        }
+      });
+    };
 
     const startTimer = window.setTimeout(() => {
       if (cancelled) return;
 
-      startQrScannerWithBackCamera(
-        scanner,
-        QR_SCAN_CONFIG,
-        (decoded) => {
-          if (busyRef.current) return;
-          void processCode(decoded);
-        },
-      )
-        .then(() => {
-          if (!cancelled) setCameraReady(true);
+      startQrScannerWithBackCamera(scanner, scanRegionId, QR_SCAN_CONFIG, onDecoded)
+        .then((cleanup) => {
+          if (cancelled) {
+            cleanup();
+            return;
+          }
+          stopScan = cleanup;
+          setCameraReady(true);
         })
         .catch(() => {
           if (!cancelled) {
             setAlert({ kind: "neutral", title: "Camera not available." });
           }
         });
-    }, 150);
+    }, 200);
 
     return () => {
       cancelled = true;
       window.clearTimeout(startTimer);
-      if (scannerRef.current) {
-        void scannerRef.current.stop().catch(() => {});
-        scannerRef.current.clear();
-        scannerRef.current = null;
-      }
+      stopScan?.();
+      scannerRef.current = null;
     };
   }, [scanRegionId, processCode]);
 
@@ -170,7 +182,9 @@ export function VolunteerScanClient() {
       {busy ? (
         <p className="text-center text-sm text-zinc-500">Processing…</p>
       ) : cameraReady ? (
-        <p className="text-center text-sm text-zinc-500">Point camera at attendee QR code</p>
+        <p className="text-center text-sm text-zinc-500">
+          Point camera at QR · hold steady · lower screen brightness if needed
+        </p>
       ) : (
         <p className="text-center text-sm text-zinc-500">Starting camera…</p>
       )}

@@ -9,12 +9,12 @@ type Props = {
   size?: number;
 };
 
-export async function AttendeeCheckInQr({ code, batchCode, name, size = 200 }: Props) {
+export async function AttendeeCheckInQr({ code, batchCode, name, size = 240 }: Props) {
   const payload = buildAttendanceQrScanValue(code);
   const dataUrl = await QRCode.toDataURL(payload, {
     width: size,
-    margin: 2,
-    errorCorrectionLevel: "M",
+    margin: 3,
+    errorCorrectionLevel: "H",
     color: { dark: "#000000", light: "#ffffff" },
   });
 

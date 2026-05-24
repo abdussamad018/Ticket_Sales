@@ -30,7 +30,7 @@ async function makeQrDataUrl(payload: string) {
     width: 160,
     margin: 2,
     errorCorrectionLevel: "M",
-    color: { dark: "#ffffff", light: "#000000" },
+    color: { dark: "#000000", light: "#ffffff" },
   });
 }
 

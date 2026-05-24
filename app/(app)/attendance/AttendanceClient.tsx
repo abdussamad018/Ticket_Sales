@@ -131,35 +131,50 @@ export function AttendanceClient({ initialCode, batches, defaultBatchId, isAdmin
     }
 
     let cancelled = false;
+    let stopScan: (() => void) | undefined;
     const scanner = createQrScanner(scanRegionId);
     scannerRef.current = scanner;
 
     const startTimer = window.setTimeout(() => {
       if (cancelled) return;
 
-      startQrScannerWithBackCamera(scanner, QR_SCAN_CONFIG, (decoded) => {
-        const code = parseCheckInCodeFromScan(decoded);
-        if (!code) return;
-        setQuery(code);
-        setTab("phone");
-        void runSearch(code);
-      }).catch(() => {
-        if (!cancelled) {
-          setMessage("Camera not available. Use phone search instead.");
-        }
-      });
-    }, 150);
+      if (!batchId) {
+        setMessage("Select a batch first, then scan.");
+        return;
+      }
+
+      startQrScannerWithBackCamera(scanner, scanRegionId, QR_SCAN_CONFIG, (decoded) => {
+        const trimmed = decoded.trim();
+        if (!trimmed) return;
+
+        const code = parseCheckInCodeFromScan(trimmed);
+        const searchValue = code ?? trimmed;
+
+        setQuery(searchValue);
+        setMessage(code ? `Scanned ${code}` : "QR read — searching…");
+        void runSearch(searchValue);
+      })
+        .then((cleanup) => {
+          if (cancelled) {
+            cleanup();
+            return;
+          }
+          stopScan = cleanup;
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setMessage("Camera not available. Use phone search instead.");
+          }
+        });
+    }, 200);
 
     return () => {
       cancelled = true;
       window.clearTimeout(startTimer);
-      if (scannerRef.current) {
-        void scannerRef.current.stop().catch(() => {});
-        scannerRef.current.clear();
-        scannerRef.current = null;
-      }
+      stopScan?.();
+      scannerRef.current = null;
     };
-  }, [tab, scanRegionId, runSearch]);
+  }, [tab, scanRegionId, runSearch, batchId]);
 
   async function checkIn(ids: string[]) {
     setBusyId(ids.join(","));
@@ -303,8 +318,18 @@ export function AttendanceClient({ initialCode, batches, defaultBatchId, isAdmin
           </button>
         </form>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-black/10 bg-black dark:border-white/10">
-          <div id={scanRegionId} className="w-full" />
+        <div className="space-y-2">
+          {!batchId ? (
+            <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100">
+              Select a batch above before scanning.
+            </p>
+          ) : null}
+          <div className="overflow-hidden rounded-2xl border border-black/10 bg-black dark:border-white/10">
+            <div id={scanRegionId} className="min-h-[min(70vw,320px)] w-full [&_video]:!object-cover" />
+          </div>
+          <p className="text-center text-xs text-zinc-500">
+            Hold steady · fill the screen with the QR · lower brightness if glare
+          </p>
         </div>
       )}
 
