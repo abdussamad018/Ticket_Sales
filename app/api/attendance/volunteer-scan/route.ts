@@ -9,6 +9,18 @@ const bodySchema = z.object({
   scan: z.string().min(1).max(2000),
 });
 
+function brief(
+  name: string,
+  batchCode: string,
+  checkedInAt: Date,
+) {
+  return {
+    fullName: name,
+    batchCode,
+    checkedInAt: checkedInAt.toISOString(),
+  };
+}
+
 /** Volunteer gate: scan QR → find attendee globally → check in (one request). */
 export async function POST(req: Request) {
   const session = await getSession();
@@ -61,31 +73,36 @@ export async function POST(req: Request) {
       status: "already_checked_in",
       message: "Already checked in",
       detail: `${name} · Batch ${batchCode}`,
-      attendee: {
-        fullName: name,
-        batchCode,
-        checkedInAt: attendee.checkedInAt.toISOString(),
-      },
+      attendee: brief(name, batchCode, attendee.checkedInAt),
     });
   }
 
   const now = new Date();
-  await prisma.attendee.update({
-    where: { id: attendee.id },
+  const updated = await prisma.attendee.updateMany({
+    where: { id: attendee.id, checkedInAt: null },
     data: {
       checkedInAt: now,
       checkedInById: session.userId,
     },
   });
 
+  if (updated.count === 0) {
+    const again = await prisma.attendee.findUnique({
+      where: { id: attendee.id },
+      select: { checkedInAt: true },
+    });
+    return NextResponse.json({
+      status: "already_checked_in",
+      message: "Already checked in",
+      detail: `${name} · Batch ${batchCode}`,
+      attendee: brief(name, batchCode, again?.checkedInAt ?? now),
+    });
+  }
+
   return NextResponse.json({
     status: "checked_in",
     message: "Check-in successful",
     detail: `${name} · Batch ${batchCode}`,
-    attendee: {
-      fullName: name,
-      batchCode,
-      checkedInAt: now.toISOString(),
-    },
+    attendee: brief(name, batchCode, now),
   });
 }

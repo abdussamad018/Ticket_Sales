@@ -15,7 +15,7 @@ export default async function AttendancePage({
 
   if (volunteer) {
     return (
-      <div className="mx-auto w-full max-w-lg px-0 py-0">
+      <section className="mx-auto w-full max-w-lg px-0 py-0 pb-6">
         <div className="space-y-1 text-center">
           <h1 className="text-xl font-semibold tracking-tight">Gate check-in</h1>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
@@ -25,7 +25,7 @@ export default async function AttendancePage({
         <div className="mt-4">
           <VolunteerScanClient />
         </div>
-      </div>
+      </section>
     );
   }
 
