@@ -7,6 +7,9 @@ import { PrintButton } from "@/app/(print)/reports/print/PrintButton";
 import { BatchCombobox } from "@/app/ui/BatchCombobox";
 
 const ROWS_PER_PAGE = 45;
+/** Attendee rows on sign-in sheet: ticket.code in DB (see prisma/seed). */
+const ALUMNI_TICKET_CODE = "ALUMNI";
+const MIN_BLANK_ROWS_PER_BATCH = 5;
 
 function labelType(t: AttendeeType) {
   if (t === "ADULT") return "Adult";
@@ -20,12 +23,41 @@ type AttendeeRow = {
   type: AttendeeType;
   phone: string | null;
   tshirt: string | null;
+  isBlank?: boolean;
 };
 
 type BatchSection = {
   batch: { id: string; code: string; name: string | null };
   rows: AttendeeRow[];
 };
+
+function blankSignInRows(count: number, batchId: string): AttendeeRow[] {
+  return Array.from({ length: count }, (_, i) => ({
+    id: `blank-${batchId}-${i}`,
+    fullName: null,
+    type: "ADULT" as AttendeeType,
+    phone: null,
+    tshirt: null,
+    isBlank: true,
+  }));
+}
+
+function paginateBatchSheet(attendeeRows: AttendeeRow[], batchId: string, pageSize: number) {
+  const blanks = blankSignInRows(MIN_BLANK_ROWS_PER_BATCH, batchId);
+  const dataPages = chunkRows(attendeeRows, pageSize);
+  if (dataPages.length === 0) {
+    return [blanks];
+  }
+  const lastIdx = dataPages.length - 1;
+  const lastPage = dataPages[lastIdx]!;
+  const withBlanks = [...lastPage, ...blanks];
+  if (withBlanks.length <= pageSize) {
+    dataPages[lastIdx] = withBlanks;
+    return dataPages;
+  }
+  dataPages.push(blanks);
+  return dataPages;
+}
 
 function chunkRows(rows: AttendeeRow[], size: number) {
   const chunks: AttendeeRow[][] = [];
@@ -69,7 +101,10 @@ export default async function AttendanceSignSheetPage({
         : { id: { in: [] as string[] } };
 
   const attendees = await prisma.attendee.findMany({
-    where: { participant: participantWhere },
+    where: {
+      participant: participantWhere,
+      ticket: { code: ALUMNI_TICKET_CODE },
+    },
     select: {
       id: true,
       fullName: true,
@@ -106,9 +141,16 @@ export default async function AttendanceSignSheetPage({
     });
   }
 
-  const batchSections = Array.from(byBatchId.values()).sort((a, b) =>
+  let batchSections = Array.from(byBatchId.values()).sort((a, b) =>
     a.batch.code.localeCompare(b.batch.code, undefined, { numeric: true }),
   );
+
+  if (batchFilterActive && batchId && batchSections.length === 0) {
+    const batch = batchesAll.find((b) => b.id === batchId);
+    if (batch) {
+      batchSections = [{ batch, rows: [] }];
+    }
+  }
 
   const today = new Date();
   const totalAttendees = attendees.length;
@@ -124,9 +166,11 @@ export default async function AttendanceSignSheetPage({
 
       <div className="no-print flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Attendee sign-in sheet</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Alumni sign-in sheet</h1>
           <p className="text-sm text-zinc-600">
-            Batch-wise printable list with a signature column for manual attendance at the gate.
+            Batch-wise printable list for ticket code{" "}
+            <span className="font-mono">{ALUMNI_TICKET_CODE}</span> only, with signature column and{" "}
+            {MIN_BLANK_ROWS_PER_BATCH} blank rows at the end of each batch for walk-ins.
           </p>
           <Link
             href="/reports"
@@ -175,14 +219,14 @@ export default async function AttendanceSignSheetPage({
       <div className="mt-6 rounded-2xl border border-black/10 bg-white p-4 text-sm">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="font-medium">
-            Attendee sign-in — manual signature
+            Alumni sign-in — ticket {ALUMNI_TICKET_CODE}
             {batchFilterActive ? (
               <span className="ml-2 font-normal text-zinc-600">(one batch)</span>
             ) : null}
           </div>
           <div className="text-zinc-600">
-            {totalAttendees} attendee{totalAttendees === 1 ? "" : "s"} · Generated:{" "}
-            {today.toLocaleString()}
+            {totalAttendees} alumni ticket{totalAttendees === 1 ? "" : "s"} · +{MIN_BLANK_ROWS_PER_BATCH} blank
+            row(s) per batch · Generated: {today.toLocaleString()}
           </div>
         </div>
       </div>
@@ -194,11 +238,13 @@ export default async function AttendanceSignSheetPage({
           </div>
         ) : batchSections.length === 0 ? (
           <div className="rounded-2xl border border-black/10 bg-white p-5 text-sm text-zinc-600">
-            No attendees in this scope yet.
+            No {ALUMNI_TICKET_CODE} ticket holders in this scope yet. Select a batch to print a sheet with blank rows
+            only.
           </div>
         ) : (
           batchSections.map((sec) => {
-            const pages = chunkRows(sec.rows, ROWS_PER_PAGE);
+            const alumniCount = sec.rows.length;
+            const pages = paginateBatchSheet(sec.rows, sec.batch.id, ROWS_PER_PAGE);
             return pages.map((pageRows, pageIdx) => (
               <section
                 key={`${sec.batch.id}-${pageIdx}`}
@@ -210,7 +256,8 @@ export default async function AttendanceSignSheetPage({
                     <div className="text-xs text-zinc-600">{sec.batch.name}</div>
                   ) : null}
                   <div className="mt-1 text-xs text-zinc-600">
-                    {sec.rows.length} attendee{sec.rows.length === 1 ? "" : "s"}
+                    {alumniCount} alumni ticket{alumniCount === 1 ? "" : "s"} · {MIN_BLANK_ROWS_PER_BATCH} blank
+                    row(s) at end
                     {pages.length > 1 ? (
                       <>
                         {" "}
@@ -238,21 +285,21 @@ export default async function AttendanceSignSheetPage({
                       {pageRows.map((row, idx) => {
                         const rowNum = pageIdx * ROWS_PER_PAGE + idx + 1;
                         return (
-                          <tr key={row.id}>
+                          <tr key={row.id} className={row.isBlank ? "bg-zinc-50/80" : undefined}>
                             <td className="border border-black/20 px-2 py-2.5 tabular-nums text-zinc-600">
-                              {rowNum}
+                              {row.isBlank ? "" : rowNum}
                             </td>
                             <td className="border border-black/20 px-3 py-2.5 font-medium">
-                              {row.fullName?.trim() || "—"}
+                              {row.isBlank ? "" : row.fullName?.trim() || "—"}
                             </td>
                             <td className="border border-black/20 px-2 py-2.5 text-xs">
-                              {labelType(row.type)}
+                              {row.isBlank ? "" : labelType(row.type)}
                             </td>
                             <td className="border border-black/20 px-3 py-2.5 font-mono text-xs tabular-nums">
-                              {row.phone?.trim() || "—"}
+                              {row.isBlank ? "" : row.phone?.trim() || "—"}
                             </td>
                             <td className="border border-black/20 px-2 py-2.5 text-xs tabular-nums">
-                              {row.tshirt ?? "—"}
+                              {row.isBlank ? "" : row.tshirt ?? "—"}
                             </td>
                             <td className="h-10 border border-black/20 px-3 py-2.5" />
                           </tr>
